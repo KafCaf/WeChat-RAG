@@ -1,0 +1,72 @@
+<view class="chat-container">
+  <scroll-view 
+    class="message-list" 
+    scroll-y="true" 
+    scroll-into-view="{{scrollToId}}"
+    scroll-with-animation="true"
+  >
+  <block wx:for="{{messages}}" wx:key="id">
+      
+      <block wx:if="{{item.role === 'system'}}">
+        <view class="system-msg" id="{{item.id}}">
+          <text class="system-text">{{item.content}}</text>
+        </view>
+      </block>
+
+      <block wx:else>
+        <view class="message-item {{item.role === 'user' ? 'message-right' : 'message-left'}}" id="{{item.id}}">
+          <image class="avatar {{item.role === 'user' ? 'user-avatar-margin' : 'bot-avatar-margin'}}" src="{{item.role === 'user' ? '/images/user.jpg' : '/images/robot.jpg'}}" mode="aspectFill"></image>
+          
+          <view class="message-bubble">
+          <block wx:if="{{item.isLoadingBubble}}">
+            <view class="loading-dots">
+              <text class="dot">.</text><text class="dot">.</text><text class="dot">.</text>
+            </view>
+          </block>
+          <block wx:else>
+            <text class="message-text" user-select="true">{{item.content}}</text>
+            
+            <block wx:if="{{item.reference}}">
+              <view class="reference-divider"></view>
+              <text class="reference-text" user-select="true">{{item.reference}}</text>
+            </block>
+          </block>
+        </view>
+        </view>
+      </block>
+
+    </block>
+    <view class="bottom-spacer" id="bottom-spacer"></view>
+  </scroll-view>
+
+  <view class="bottom-bar">
+    
+    <view class="toolbar">
+      <picker class="project-picker-wrap" mode="selector" range="{{projects}}" value="{{selectedProjectIndex}}" bindchange="onProjectChange">
+        <view class="project-selector">
+          <text class="selector-icon">📂</text>
+          <text class="selector-text">{{selectedProjectName}}</text>
+          <text class="selector-arrow">▼</text>
+        </view>
+      </picker>
+
+      <view class="upload-btn" bindtap="chooseAndUploadFile" hover-class="upload-btn-hover">
+        <text class="upload-icon">📤</text>
+        <text>上传知识</text>
+      </view>
+    </view>
+
+    <view class="input-area">
+      <input 
+        class="message-input" 
+        value="{{inputValue}}" 
+        bindinput="handleInput" 
+        bindconfirm="sendMessage"
+        placeholder="问点关于这个项目的问题..." 
+        cursor-spacing="20"
+        confirm-type="send"
+      />
+      <button class="send-btn" bindtap="sendMessage" disabled="{{!inputValue || isLoading}}">发送</button>
+    </view>
+  </view> </view> ```
+

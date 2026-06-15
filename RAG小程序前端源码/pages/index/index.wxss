@@ -1,0 +1,288 @@
+/* =======================================
+   1. 全局与页面基础设置
+   ======================================= */
+   page {
+    background-color: #ededed; 
+    height: 100%;
+  }
+  
+  .chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden; /* 🌟 新增：锁死最外层容器，绝对不允许整个页面跟着滚动 */
+  }
+  
+  /* =======================================
+     2. 消息列表区 (含刘海屏适配)
+     ======================================= */
+  /* =======================================
+   2. 消息列表区 (含刘海屏适配)
+   ======================================= */
+.message-list {
+  flex: 1;
+  height: 0; 
+  /* 🌟 核心修复：把原来的 150rpx 改大，增加到 280rpx 或 300rpx */
+  padding: calc(env(safe-area-inset-top) + 40rpx) 24rpx 280rpx 24rpx;
+  box-sizing: border-box;
+}
+
+.bottom-spacer {
+  /* 🌟 可选修复：顺便把占位垫片也稍微加高一点点，让最后一条消息离底栏有点呼吸感 */
+  height: 40rpx; 
+}
+  
+  /* =======================================
+     3. 单条消息布局
+     ======================================= */
+  .message-item {
+    display: flex;
+    margin-bottom: 40rpx;
+    align-items: flex-start; /* 头像和气泡顶部对齐 */
+  }
+  
+  .message-left {
+    flex-direction: row; /* 机器人在左 */
+  }
+  
+  .message-right {
+    flex-direction: row-reverse; /* 用户在右 */
+  }
+  
+  /* =======================================
+     4. 头像样式
+     ======================================= */
+  .avatar {
+    width: 80rpx;
+    height: 80rpx;
+    border-radius: 50%;
+    flex-shrink: 0; /* 防止头像被挤压 */
+    background-color: #fff;
+  }
+  
+  .bot-avatar-margin {
+    margin-right: 20rpx;
+  }
+  
+  .user-avatar-margin {
+    margin-left: 20rpx;
+  }
+  
+  /* =======================================
+     5. 聊天气泡样式
+     ======================================= */
+  .message-bubble {
+    max-width: 65%; /* 限制气泡最大宽度，防止太长 */
+    padding: 20rpx 28rpx;
+    border-radius: 16rpx;
+    font-size: 30rpx;
+    line-height: 1.6;
+    word-break: break-all; /* 允许长单词换行 */
+  }
+  
+  /* 机器人的气泡：白底黑字，左上角变直角 */
+  .message-left .message-bubble {
+    background-color: #ffffff;
+    color: #333333;
+    border-top-left-radius: 4rpx;
+  }
+  
+  /* 用户的气泡：绿底黑字，右上角变直角 */
+  .message-right .message-bubble {
+    background-color: #95ec69; /* 微信经典绿 */
+    color: #000000;
+    border-top-right-radius: 4rpx;
+  }
+  
+  .message-text {
+    white-space: pre-wrap; /* 完美保留大模型返回的换行符 */
+  }
+  
+  /* =======================================
+     /* =======================================
+   6. 🌟 修改后：底部固定操作区 (选择器 + 上传按钮 + 输入框)
+   ======================================= */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #f7f7f7;
+  border-top: 1rpx solid #e5e5e5;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  z-index: 99;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 🌟 新增：包裹选择器和上传按钮的工具栏 */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* 左右两端对齐 */
+  padding: 20rpx 24rpx 0 24rpx;
+}
+
+.project-picker-wrap {
+  flex: 1; /* 占据剩余空间 */
+  overflow: hidden;
+}
+
+/* 项目选择器样式 */
+.project-selector {
+  display: inline-flex;
+  align-items: center;
+  background-color: #ffffff;
+  padding: 8rpx 24rpx;
+  border-radius: 30rpx;
+  font-size: 26rpx;
+  color: #555;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
+}
+
+.selector-icon {
+  margin-right: 10rpx;
+}
+
+.selector-text {
+  max-width: 300rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selector-arrow {
+  margin-left: 10rpx;
+  font-size: 20rpx;
+  color: #999;
+}
+
+/* 🌟 新增：上传按钮样式 */
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  background-color: #ffffff;
+  padding: 8rpx 24rpx;
+  border-radius: 30rpx;
+  font-size: 26rpx;
+  color: #1989fa;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
+  margin-left: 15rpx;
+}
+
+.upload-btn-hover {
+  background-color: #eef5ff;
+}
+
+.upload-icon {
+  margin-right: 8rpx;
+  font-size: 28rpx;
+}
+
+/* 输入框区域样式调整 */
+.input-area {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 20rpx 24rpx;
+  width: 100%;
+}
+
+.message-input {
+  flex: 1;
+  height: 76rpx;
+  background-color: #ffffff;
+  border-radius: 38rpx;
+  padding: 0 32rpx;
+  font-size: 30rpx;
+  margin-right: 20rpx;
+}
+
+.send-btn {
+  width: 140rpx !important;
+  height: 76rpx;
+  line-height: 76rpx;
+  background-color: #07c160;
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: 500;
+  border-radius: 38rpx;
+  padding: 0;
+  margin: 0;
+}
+
+.send-btn[disabled]:not([type]) {
+  background-color: #e2e2e2 !important;
+  color: #999999 !important;
+}
+  /* =======================================
+     7. 🌟 聊天气泡加载动画 (跳动的三个点)
+     ======================================= */
+  .loading-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 48rpx; 
+    padding: 0 10rpx;
+  }
+  
+  .dot {
+    font-size: 40rpx;
+    line-height: 40rpx;
+    color: #888;
+    margin: 0 6rpx;
+    animation: jump 1.4s infinite ease-in-out both;
+  }
+  
+  .dot:nth-child(1) {
+    animation-delay: -0.32s;
+  }
+  .dot:nth-child(2) {
+    animation-delay: -0.16s;
+  }
+  
+  @keyframes jump {
+    0%, 80%, 100% { 
+      transform: translateY(0);
+    }
+    40% { 
+      transform: translateY(-12rpx);
+    }
+  }
+  /* =======================================
+   8. 🌟 系统提示消息样式
+   ======================================= */
+.system-msg {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 40rpx; /* 和普通消息保持一样的间距 */
+  padding: 0 40rpx;
+}
+
+.system-text {
+  font-size: 24rpx; /* 字体比聊天气泡小一点 */
+  color: #999999; /* 低调的高级灰 */
+  background-color: rgba(0, 0, 0, 0.05); /* 给一点点半透明的灰色底色 */
+  padding: 8rpx 20rpx;
+  border-radius: 12rpx; /* 小圆角 */
+  text-align: center;
+  line-height: 1.4;
+}
+/* =======================================
+   9. 🌟 参考来源排版样式
+   ======================================= */
+   .reference-divider {
+    height: 1rpx;
+    /* 使用极浅的灰色虚线，显得精致 */
+    border-top: 1rpx dashed rgba(0, 0, 0, 0.1); 
+    margin: 16rpx 0; /* 上下留白 */
+  }
+  
+  .reference-text {
+    font-size: 24rpx; /* 字体比正文小 */
+    color: #888888;   /* 颜色变灰 */
+    line-height: 1.5;
+    white-space: pre-wrap; 
+    word-break: break-all;
+    display: block; /* 保证它独占一块区域 */
+  }

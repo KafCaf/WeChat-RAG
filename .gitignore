@@ -1,0 +1,31 @@
+# 忽略 Python 缓存
+__pycache__/
+*.pyc
+.vscode/
+
+# 忽略本地测试生成的临时结果文件
+results/
+*.xlsx
+*.csv
+# 排除 Elasticsearch 安装包及相关数据
+*.tar.gz
+*.zip
+
+# 排除 RAG 系统的知识库文档和向量数据库缓存
+knowledge_base/
+
+# 如果你的模型文件下载到了当前目录下的某个文件夹（比如叫 models），也加上：
+# models/
+
+# 项目新增
+node_modules/
+.DS_Store
+.codegraph/
+*.db
+*.docx
+.env
+es-data/
+.reasonix/
+rag-ui/dist/
+*.log
+*.pid

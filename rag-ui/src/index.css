@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 加一点点全局背景色，提升质感 */
+body {
+  background-color: #f8fafc; 
+}
