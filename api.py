@@ -15,7 +15,7 @@ from utils import get_kb_path, list_files_from_folder, list_kbs_from_folder
 from init_database import process_document
 from retrievers.VectorRetriever import VectorRetrieval
 from configs.model_configs import EMBED_CONFIG
-from server.embedding import load_embeddings
+from server.embedding import load_embeddings, CloudEmbedModel
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware # 🌟 引入跨域中间件
 import sqlite3
@@ -40,19 +40,28 @@ retriever = None
 http_client = None
 
 # API Key 和 URL 均通过环境变量读取，不硬编码
-QWEN_API_KEY = os.getenv("QWEN_API_KEY", "")
-QWEN_API_URL = os.getenv("QWEN_API_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions")
-TARGET_MODEL = os.getenv("TARGET_MODEL", "qwen-flash") 
+# DeepSeek API (兼容 OpenAI 格式)
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
+DEEPSEEK_API_URL = os.getenv("DEEPSEEK_API_URL", "https://api.deepseek.com/v1/chat/completions")
+TARGET_MODEL = os.getenv("TARGET_MODEL", "deepseek-chat")  # DeepSeek V4 Flash
+# 阿里云百炼 Embedding API
+DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY", "")
+DASHSCOPE_EMBED_URL = os.getenv("DASHSCOPE_EMBED_URL", "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding")
+DASHSCOPE_EMBED_MODEL = os.getenv("DASHSCOPE_EMBED_MODEL", "text-embedding-v4")
+# 阿里云百炼 Reranker API
+DASHSCOPE_RERANK_URL = os.getenv("DASHSCOPE_RERANK_URL", "https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank")
+DASHSCOPE_RERANK_MODEL = os.getenv("DASHSCOPE_RERANK_MODEL", "gte-rerank")
 CURRENT_INDEX = os.getenv("ES_INDEX", "index_user_test")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global es_client, embed_model, retriever, http_client
     
-    # 1. 常规初始化（你原有的逻辑）
+    # 1. 初始化 Elasticsearch
     es_client = Elasticsearch("http://localhost:9200")
     
-    embed_model = load_embeddings(model=EMBED_CONFIG["embed_model"], device=EMBED_CONFIG["embed_device"])
+    # 2. 使用云端 Embedding (百炼 text-embedding-v4)，无需本地 GPU
+    embed_model = CloudEmbedModel()
     retriever = VectorRetrieval(embed_model, es_client=es_client)
     
     http_client = httpx.AsyncClient(
@@ -60,44 +69,45 @@ async def lifespan(app: FastAPI):
         timeout=httpx.Timeout(60.0, connect=5.0) 
     )
     
-    # ================= 核心：系统冷启动预热 (Dummy Request) =================
+    # ================= 系统冷启动预热 =================
     print("\n" + "="*50)
     print("[系统预热] 正在执行 Dummy Request 消除冷启动开销...")
     
     try:
-        # [预热 1]: 激活 PyTorch/CUDA 显存与底层算子 (耗时大头1)
-        print("  -> 1/3 预热 Embedding 模型与 CUDA 上下文...")
-        start_t = time.time()
-        # 强制跑一次前向传播，让 GPU 把该占的显存占满，算子图编译好
-        _ = embed_model.encode(["预热指令"], return_dense=False, return_sparse=False, return_colbert_vecs=True)
-        print(f"     完成，耗时: {time.time() - start_t:.2f}s")
-
-        # [预热 2]: 激活 Elasticsearch 连接与缓存池
-        print("  -> 2/3 预热 Elasticsearch 索引与 I/O 缓存...")
+        # [预热 1]: 激活 Elasticsearch 连接与缓存池
+        print("  -> 1/3 预热 Elasticsearch 索引与 I/O 缓存...")
         start_t = time.time()
         if es_client.ping():
-            # 随便查一条数据，把 OS 缓存和 ES 倒排索引拉进内存 (忽略 404 防止空索引报错)
             _ = es_client.search(index=CURRENT_INDEX, body={"query": {"match_all": {}}, "size": 1}, ignore=[400, 404])
         print(f"     完成，耗时: {time.time() - start_t:.2f}s")
 
-        # [预热 3]: 激活 httpx 长连接池与 TLS 握手 (耗时大头2)
-        print("  -> 3/3 预热 LLM API 网络长连接通道...")
+        # [预热 2]: 激活云端 Embedding API 长连接 (百炼)
+        print("  -> 2/3 预热云端 Embedding API 连接...")
+        start_t = time.time()
+        _ = embed_model.encode(["预热指令"], return_dense=True, return_sparse=False, return_colbert_vecs=False)
+        print(f"     完成，耗时: {time.time() - start_t:.2f}s")
+
+        # [预热 3]: 激活 DeepSeek API 长连接通道
+        print("  -> 3/3 预热 DeepSeek LLM API 网络长连接通道...")
         start_t = time.time()
         dummy_payload = {
             "model": TARGET_MODEL,
-            "messages": [{"role": "system", "content": "1"}], # 极简 Payload，减少大模型计算量
+            "messages": [{"role": "system", "content": "1"}],
             "max_tokens": 1
         }
-        headers = {"Authorization": f"Bearer {QWEN_API_KEY}", "Content-Type": "application/json"}
+        headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
         
-        # 使用 wait_for 加个保险，防止万一网络断了导致整个 FastAPI 启动卡死
         _ = await asyncio.wait_for(
-            http_client.post(QWEN_API_URL, json=dummy_payload, headers=headers),
+            http_client.post(DEEPSEEK_API_URL, json=dummy_payload, headers=headers),
             timeout=10.0
         )
         print(f"     完成，耗时: {time.time() - start_t:.2f}s")
 
         print("[系统预热] 全部预热完成！")
+        print("="*50 + "\n")
+
+    except Exception as e:
+        print(f"[系统预热] 预热过程遇到非致命异常，跳过预热: {e}")
         print("="*50 + "\n")
 
     except Exception as e:
@@ -161,10 +171,10 @@ async def chat_and_rag(request: ChatRequest):
             "max_tokens": 100
         }
         
-        headers = {"Authorization": f"Bearer {QWEN_API_KEY}", "Content-Type": "application/json"}
+        headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
         
         # 异步调用大模型进行扩展
-        exp_response = await http_client.post(QWEN_API_URL, json=expansion_payload, headers=headers)
+        exp_response = await http_client.post(DEEPSEEK_API_URL, json=expansion_payload, headers=headers)
         if exp_response.status_code == 200:
             expanded_text = exp_response.json()["choices"][0]["message"]["content"].strip()
             # 将原始问题与扩展词拼接，形成更丰富的召回 Query
@@ -237,13 +247,13 @@ async def chat_and_rag(request: ChatRequest):
         }
         
         headers = {
-            "Authorization": f"Bearer {QWEN_API_KEY}",
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
             "Content-Type": "application/json"
         }
         
         # 优化项2：记录 LLM 请求耗时
         start_llm_time = time.time()
-        response = await http_client.post(QWEN_API_URL, json=payload, headers=headers)
+        response = await http_client.post(DEEPSEEK_API_URL, json=payload, headers=headers)
         llm_time = time.time() - start_llm_time
         
         print(f"[性能监控] 检索耗时: {retrieval_time:.2f}s | LLM API耗时: {llm_time:.2f}s")

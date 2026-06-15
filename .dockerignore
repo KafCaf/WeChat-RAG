@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# 环境变量
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# 知识库文档
+knowledge_base/
+
+# ES 数据
+es-data/
+
+# 数据库
+*.db
+
+# 文档
+*.docx
+*.xlsx
+*.csv
+*.png
+*.jpg
+
+# 模型
+models/
+
+# Node
+node_modules/
+
+# Git
+.git/
+.gitignore
+
+# macOS
+.DS_Store
+
+# 日志
+*.log
+*.pid
+
+# 临时文件
+tmp/
+temp/

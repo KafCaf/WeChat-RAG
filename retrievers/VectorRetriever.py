@@ -168,22 +168,31 @@ class VectorRetrieval(BaseRetrieval):
         vector_ranks = [(hit["_id"], idx + 1) for idx, hit in enumerate(response["hits"]["hits"])]
 
         final_sorted_docs = self.calculate_rrf(bm25_ranks, vector_ranks)
-        sorted_doc_ids = [doc_id for doc_id, result in final_sorted_docs][:int(1/10 * top_k1)]
+        # 🌟 扩大候选池：取前 20 个进精排（原来是 4 个）
+        sorted_doc_ids = [doc_id for doc_id, result in final_sorted_docs][:20]
         docs = self.get_documents_with_ids(sorted_doc_ids, index_name)
         
-        output_1 = self.embed_model.encode([query], return_dense=False, return_sparse=False, return_colbert_vecs=True)
-        output_2 = self.embed_model.encode(docs, return_dense=False, return_sparse=False, return_colbert_vecs=True)
+        # 🌟 使用云端 Reranker 替代 ColBERT 精排
+        try:
+            from server.reranker import cloud_rerank
+            rerank_results = cloud_rerank(query, docs, top_n=top_k2)
+            sorted_docs = [docs[idx] for idx, _ in rerank_results]
+            sorted_scores = [score for _, score in rerank_results]
+        except Exception:
+            # 降级：使用 ColBERT（云端模型可能返回 0）
+            output_1 = self.embed_model.encode([query], return_dense=False, return_sparse=False, return_colbert_vecs=True)
+            output_2 = self.embed_model.encode(docs, return_dense=False, return_sparse=False, return_colbert_vecs=True)
+            
+            colbert_scores = []
+            for i in range(len(docs)):
+                colbert_score = float(self.embed_model.colbert_score(output_1['colbert_vecs'][0], output_2['colbert_vecs'][i]))
+                colbert_scores.append(colbert_score)
+            zipped = list(zip(docs, colbert_scores))
+            sorted_zipped = sorted(zipped, key=lambda x: x[1], reverse=True)
+            sorted_docs = [doc for doc, _ in sorted_zipped][:top_k2]
+            sorted_scores = [score for _, score in sorted_zipped][:top_k2]
         
-        colbert_scores = []
-        for i in range(len(docs)):
-            colbert_score = float(self.embed_model.colbert_score(output_1['colbert_vecs'][0], output_2['colbert_vecs'][i]))
-            colbert_scores.append(colbert_score)
-        zipped = list(zip(docs, colbert_scores))
-        sorted_zipped = sorted(zipped, key=lambda x: x[1], reverse=True)
-        sorted_docs = [doc for doc, _ in sorted_zipped][:top_k2]
-        sorted_scores = [score for _, score in sorted_zipped][:top_k2]
-        
-        return sorted_docs,sorted_scores
+        return sorted_docs, sorted_scores
 
     def search(self, index_name, query, top_k1=1000, top_k2=5, **kwargs):
         """
