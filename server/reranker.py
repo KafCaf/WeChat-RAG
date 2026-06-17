@@ -1,8 +1,8 @@
-import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from configs.model_configs import MODEL_PATH
 
 def load_reranker(model_name="bge-reranker-large", device="cuda"):
+    import torch
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
     model_path = MODEL_PATH["reranker_model"][model_name]
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     
@@ -11,6 +11,7 @@ def load_reranker(model_name="bge-reranker-large", device="cuda"):
 
 def get_rerank_scores(model, tokenizer, query, docs):
     """计算查询（query）与每个文档（docs）的相关性分数"""
+    import torch
     pairs = [[query, doc] for doc in docs]
     
     with torch.no_grad():
