@@ -454,12 +454,18 @@ def login_api(user: UserLogin):
     fake_token = f"token_{user.username}" 
     return {"status": "success", "message": "登录成功", "username": user.username, "token": fake_token}
 # 1. 挂载静态资源（CSS, JS, 图片等），让浏览器能找到网页的“衣服”
-app.mount("/assets", StaticFiles(directory="rag-ui/dist/assets"), name="assets")
+_static_dir = "rag-ui/dist/assets"
+if os.path.isdir(_static_dir):
+    app.mount("/assets", StaticFiles(directory=_static_dir), name="assets")
+else:
+    print(f"[WARN] React 前端未构建 ('{_static_dir}' 不存在)，跳过静态文件挂载")
 
 # 2. 访问根路径 "/" 时，直接把刚才打包好的 index.html 丢给浏览器看
 @app.get("/")
 async def read_index():
-    return FileResponse("rag-ui/dist/index.html")
+    if os.path.isfile("rag-ui/dist/index.html"):
+        return FileResponse("rag-ui/dist/index.html")
+    return {"status": "ok", "message": "RAG API is running. React frontend not deployed."}
 if __name__ == '__main__':
     import uvicorn
     uvicorn.run("api:app", host="0.0.0.0", port=6006, workers=1)
