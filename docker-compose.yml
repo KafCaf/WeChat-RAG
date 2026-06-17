@@ -43,6 +43,7 @@ services:
       - ./utils.py:/app/utils.py
       - ./init_database.py:/app/init_database.py
       - ./text_splitter:/app/text_splitter
+      - ./rag-ui/dist:/app/rag-ui/dist
       - ./stopwords.txt:/app/stopwords.txt
     ports:
       - "6006:6006"
