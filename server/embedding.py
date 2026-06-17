@@ -78,7 +78,7 @@ import httpx
 import numpy as np
 
 
-async def cloud_embed_documents(docs: List[str], api_key: str = None, model: str = None) -> Dict:
+async def cloud_embed_documents(docs: List[str], api_key: str = None, model: str = None, batch_size: int = 10) -> Dict:
     """
     通过阿里云百炼云端 API 生成 embedding，替代本地 BGE-M3。
     返回格式兼容 embed_documents：{"texts": [...], "embeddings": np.array([...])}
@@ -92,21 +92,24 @@ async def cloud_embed_documents(docs: List[str], api_key: str = None, model: str
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    payload = {
-        "model": model,
-        "input": {"texts": docs},
-        "parameters": {"text_type": "document"}
-    }
 
+    all_embeddings = []
     async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.post(url, json=payload, headers=headers)
-        resp.raise_for_status()
-        data = resp.json()
+        for i in range(0, len(docs), batch_size):
+            batch = docs[i:i + batch_size]
+            payload = {
+                "model": model,
+                "input": {"texts": batch},
+                "parameters": {"text_type": "document"}
+            }
+            resp = await client.post(url, json=payload, headers=headers)
+            resp.raise_for_status()
+            data = resp.json()
+            embeddings_list = data["output"]["embeddings"]
+            embeddings_list.sort(key=lambda x: x["text_index"])
+            all_embeddings.extend([e["embedding"] for e in embeddings_list])
 
-    embeddings_list = data["output"]["embeddings"]
-    # 按 text_index 排序确保顺序一致
-    embeddings_list.sort(key=lambda x: x["text_index"])
-    embeddings = np.array([e["embedding"] for e in embeddings_list], dtype=np.float32)
+    embeddings = np.array(all_embeddings, dtype=np.float32)
 
     return {
         "texts": docs,
@@ -114,8 +117,8 @@ async def cloud_embed_documents(docs: List[str], api_key: str = None, model: str
     }
 
 
-def cloud_embed_documents_sync(docs: List[str], api_key: str = None, model: str = None) -> Dict:
-    """同步版本，用于 run_in_executor"""
+def cloud_embed_documents_sync(docs: List[str], api_key: str = None, model: str = None, batch_size: int = 10) -> Dict:
+    """同步版本，用于 run_in_executor。百炼 API 单次最多 10 条，自动分批。"""
     import requests
 
     api_key = api_key or os.getenv("DASHSCOPE_API_KEY", "")
@@ -127,19 +130,25 @@ def cloud_embed_documents_sync(docs: List[str], api_key: str = None, model: str 
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    payload = {
-        "model": model,
-        "input": {"texts": docs},
-        "parameters": {"text_type": "document"}
-    }
 
-    resp = requests.post(url, json=payload, headers=headers, timeout=60)
-    resp.raise_for_status()
-    data = resp.json()
+    all_embeddings = []
+    for i in range(0, len(docs), batch_size):
+        batch = docs[i:i + batch_size]
+        payload = {
+            "model": model,
+            "input": {"texts": batch},
+            "parameters": {"text_type": "document"}
+        }
 
-    embeddings_list = data["output"]["embeddings"]
-    embeddings_list.sort(key=lambda x: x["text_index"])
-    embeddings = np.array([e["embedding"] for e in embeddings_list], dtype=np.float32)
+        resp = requests.post(url, json=payload, headers=headers, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
+
+        embeddings_list = data["output"]["embeddings"]
+        embeddings_list.sort(key=lambda x: x["text_index"])
+        all_embeddings.extend([e["embedding"] for e in embeddings_list])
+
+    embeddings = np.array(all_embeddings, dtype=np.float32)
 
     return {
         "texts": docs,
