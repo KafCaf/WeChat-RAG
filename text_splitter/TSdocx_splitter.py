@@ -31,7 +31,7 @@ class TSDocTextSplitter:
         if len(text) <= self.chunk_size:
             return [text] if text.strip() else []
         
-        separators = ['\n\n', '\n', '。', '；', '，', ' ']
+        separators = ['。', '；', '，', '、']
         for sep in separators:
             if sep in text:
                 parts = text.split(sep)
