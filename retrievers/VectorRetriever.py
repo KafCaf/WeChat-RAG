@@ -107,9 +107,14 @@ class VectorRetrieval(BaseRetrieval):
             index_config = {
                 "settings": {
                     "analysis": {
-                        "tokenizer": {
-                            "standard_tokenizer": {
-                                "type": "standard"
+                        "analyzer": {
+                            "custom_analyzer": {
+                                "type": "custom",
+                                "tokenizer": "ik_smart",
+                                "filter": [
+                                    "lowercase",
+                                    "custom_stop_filter",
+                                    ]
                             }
                         },
                         "filter": {
@@ -117,16 +122,6 @@ class VectorRetrieval(BaseRetrieval):
                                 "type": "stop",
                                 "stopwords_path": "stopwords.txt"
                             },
-                        },
-                        "analyzer": {
-                            "custom_analyzer": {
-                                "type": "custom",
-                                "tokenizer": "standard_tokenizer",
-                                "filter": [
-                                    "lowercase",
-                                    "custom_stop_filter",
-                                    ]
-                            }
                         }
                     }
                 },
