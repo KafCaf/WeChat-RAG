@@ -1,12 +1,28 @@
 import docx
 from typing import List
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-import json
 
 class TSDocTextSplitter:
-    def __init__(self):
+    def __init__(self, chunk_size=1250):
         self.headings = {}
-        self.splitter = RecursiveCharacterTextSplitter(chunk_size=1250, chunk_overlap=0)
+        self.chunk_size = chunk_size
+
+    def _simple_split(self, text: str) -> List[str]:
+        """简易递归切分，替代 langchain 的 RecursiveCharacterTextSplitter"""
+        if len(text) <= self.chunk_size:
+            return [text] if text.strip() else []
+        
+        # 按段落、句子、逗号、字符优先级切分
+        separators = ['\n\n', '\n', '。', '；', '，', ' ']
+        for sep in separators:
+            if sep in text:
+                parts = text.split(sep)
+                result = []
+                for part in parts:
+                    result.extend(self._simple_split(part))
+                return result
+        
+        # 兜底：按字符切
+        return [text[i:i+self.chunk_size] for i in range(0, len(text), self.chunk_size)]
 
     def split_text(self, doc: docx.document.Document) -> List[str]:
         headings_content = []
@@ -42,7 +58,7 @@ class TSDocTextSplitter:
         split_headdings_content = []
         
         for heading, content in headings_content:
-            split_content = self.splitter.split_text('\n'.join(content))
+            split_content = self._simple_split('\n'.join(content))
             for c in split_content:
                 split_headdings_content.append((heading, c))
         

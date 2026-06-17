@@ -10,6 +10,7 @@ from pathlib import Path
 from elasticsearch import Elasticsearch, helpers
 from server.embedding import CloudEmbedModel
 from configs.model_configs import MODEL_PATH, SPLITTER_CONFIG
+from text_splitter.TSdocx_splitter import TSDocTextSplitter
 import warnings
 import traceback
 
@@ -122,29 +123,45 @@ def extract_text_from_file(file_path):
 
 # ==================== 2. 统一分块层 ====================
 def process_document(file_path):
-    """接管全量文本，执行滑动窗口切片并绑定元数据"""
+    """解析文档并分块。.docx 文件使用标题感知切分，其他格式使用固定窗口。"""
     chunks = {}
+    ext = os.path.splitext(file_path)[1].lower()
+    project_name = Path(file_path).parent.name
     
     # 步骤一：提取纯文本列表
     full_text_list = extract_text_from_file(file_path)
     if not full_text_list:
-        return None  # 如果提取为空，直接中断该文件处理
+        return None
     
-    # 步骤二：执行通用切片逻辑
+    # 步骤二：按格式选择切分策略
     chunk_list = []
-    chunk_size = 1200  
-    overlap = 300
     
-    current_text = "\n".join(full_text_list)
-    project_name = Path(file_path).parent.name
+    if ext == '.docx':
+        # 🌟 使用标题感知切分（按条款/标题边界）
+        try:
+            doc = Document(file_path)
+            splitter = TSDocTextSplitter(chunk_size=1200)
+            heading_chunks = splitter.split_text(doc)
+            for c in heading_chunks:
+                if len(c) > 50:
+                    tagged = f"【来源政策项目：{project_name}】\n" + c
+                    chunk_list.append(tagged)
+            print(f"文件 {Path(file_path).name} 标题感知切片完成，共生成 {len(chunk_list)} 个数据块。")
+        except Exception as e:
+            print(f"标题感知切分失败 ({e})，回退到固定窗口切分")
+            ext = ''  # 触发回退
     
-    for i in range(0, len(current_text), chunk_size - overlap):
-        chunk = current_text[i : i + chunk_size]
-        if len(chunk) > 50: 
-            tagged_chunk = f"【来源政策项目：{project_name}】\n" + chunk
-            chunk_list.append(tagged_chunk)
-
-    print(f"文件 {Path(file_path).name} 切片完成，共生成 {len(chunk_list)} 个数据块。")
+    if ext != '.docx' or not chunk_list:
+        # 回退：固定字符滑动窗口
+        chunk_size = 1200
+        overlap = 300
+        current_text = "\n".join(full_text_list)
+        for i in range(0, len(current_text), chunk_size - overlap):
+            chunk = current_text[i : i + chunk_size]
+            if len(chunk) > 50:
+                tagged_chunk = f"【来源政策项目：{project_name}】\n" + chunk
+                chunk_list.append(tagged_chunk)
+        print(f"文件 {Path(file_path).name} 固定窗口切片完成，共生成 {len(chunk_list)} 个数据块。")
 
     chunks["text"] = chunk_list 
     chunks["filename"] = str(Path(file_path).as_posix())
