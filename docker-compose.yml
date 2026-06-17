@@ -34,6 +34,8 @@ services:
       - DASHSCOPE_RERANK_MODEL=${DASHSCOPE_RERANK_MODEL:-gte-rerank}
       - ES_INDEX=${ES_INDEX:-index_user_test}
       - ES_URL=http://es:9200
+    volumes:
+      - ./knowledge_base:/app/knowledge_base
     ports:
       - "6006:6006"
     depends_on:
