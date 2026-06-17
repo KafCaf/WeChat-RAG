@@ -51,14 +51,14 @@ DASHSCOPE_EMBED_MODEL = os.getenv("DASHSCOPE_EMBED_MODEL", "text-embedding-v4")
 # 阿里云百炼 Reranker API
 DASHSCOPE_RERANK_URL = os.getenv("DASHSCOPE_RERANK_URL", "https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank")
 DASHSCOPE_RERANK_MODEL = os.getenv("DASHSCOPE_RERANK_MODEL", "gte-rerank")
-CURRENT_INDEX = os.getenv("ES_INDEX", "index_user_test")
+ES_URL = os.getenv("ES_URL", "http://localhost:9200")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global es_client, embed_model, retriever, http_client
     
     # 1. 初始化 Elasticsearch
-    es_client = Elasticsearch("http://localhost:9200")
+    es_client = Elasticsearch(ES_URL)
     
     # 2. 使用云端 Embedding (百炼 text-embedding-v4)，无需本地 GPU
     embed_model = CloudEmbedModel()

@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   es:
     image: elasticsearch:8.17.1
@@ -35,6 +33,7 @@ services:
       - DASHSCOPE_EMBED_MODEL=${DASHSCOPE_EMBED_MODEL:-text-embedding-v4}
       - DASHSCOPE_RERANK_MODEL=${DASHSCOPE_RERANK_MODEL:-gte-rerank}
       - ES_INDEX=${ES_INDEX:-index_user_test}
+      - ES_URL=http://es:9200
     ports:
       - "6006:6006"
     depends_on:
