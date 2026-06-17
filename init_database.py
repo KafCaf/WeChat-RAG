@@ -182,7 +182,7 @@ def folder2db(kb_names, retrieval_type, es_client, index_name, embed_model):
 
 # ----------------- ES 与模型初始化 -----------------
 if __name__ == "__main__":
-    es_client = Elasticsearch("http://localhost:9200")
+    es_client = Elasticsearch("http://es:9200")
     print(es_client.info())
 
     if es_client.ping():
