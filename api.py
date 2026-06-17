@@ -138,7 +138,9 @@ class ChatRequest(BaseModel):
     project_name: Optional[str] = None
     history: list = []
     top_k: int = 5
-    temperature: float = 0.01 
+    temperature: float = 0.01
+    conversation_id: Optional[int] = None
+    token: Optional[str] = ""
 
 async def chat_and_rag(request: ChatRequest):
     try:
@@ -291,7 +293,23 @@ async def chat_and_rag(request: ChatRequest):
                 for i, c in enumerate(context_list):
                     snippet = c[:100].replace('\n', ' ') + "..." if len(c) > 100 else c.replace('\n', ' ')
                     source_text += f"[{i+1}] {snippet}\n"
-        return {"answer": raw_answer + source_text}
+
+        full_answer = raw_answer + source_text
+
+        # 存储消息
+        conv_id = request.conversation_id
+        if request.token and request.token.startswith("token_"):
+            username = request.token[6:]
+            if not conv_id:
+                conv_id = get_or_create_conversation(username)
+            conn = sqlite3.connect("database.db")
+            c = conn.cursor()
+            c.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, 'user', ?)", (conv_id, request.message))
+            c.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, 'assistant', ?)", (conv_id, full_answer))
+            conn.commit()
+            conn.close()
+
+        return {"answer": full_answer, "conversation_id": conv_id}
 
     except HTTPException:
         raise
@@ -410,6 +428,24 @@ def init_db():
             hashed_password TEXT NOT NULL
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            title TEXT DEFAULT '新对话',
+            created_at TEXT DEFAULT (datetime('now','localtime'))
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id INTEGER NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now','localtime')),
+            FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -472,6 +508,70 @@ def login_api(user: UserLogin):
     # 👇 给 React 发一个凭证
     fake_token = f"token_{user.username}" 
     return {"status": "success", "message": "登录成功", "username": user.username, "token": fake_token}
+
+# ==================== 会话管理 ====================
+
+def get_user_from_token(token: str) -> str:
+    """从 token 提取用户名"""
+    if token and token.startswith("token_"):
+        return token[6:]
+    raise HTTPException(status_code=401, detail="未登录")
+
+def get_or_create_conversation(username: str) -> int:
+    """获取用户最近会话，没有则创建"""
+    conn = sqlite3.connect("database.db")
+    c = conn.cursor()
+    c.execute("SELECT id FROM conversations WHERE username=? ORDER BY id DESC LIMIT 1", (username,))
+    row = c.fetchone()
+    if row:
+        conv_id = row[0]
+    else:
+        c.execute("INSERT INTO conversations (username) VALUES (?)", (username,))
+        conn.commit()
+        conv_id = c.lastrowid
+    conn.close()
+    return conv_id
+
+class ConversationCreate(BaseModel):
+    title: str = "新对话"
+
+@app.get("/conversations")
+async def list_conversations(token: str = ""):
+    username = get_user_from_token(token)
+    conn = sqlite3.connect("database.db")
+    c = conn.cursor()
+    c.execute("SELECT id, title, created_at FROM conversations WHERE username=? ORDER BY id DESC", (username,))
+    rows = c.fetchall()
+    conn.close()
+    return {"conversations": [{"id": r[0], "title": r[1], "created_at": r[2]} for r in rows]}
+
+@app.post("/conversations")
+async def create_conversation(data: ConversationCreate, token: str = ""):
+    username = get_user_from_token(token)
+    conn = sqlite3.connect("database.db")
+    c = conn.cursor()
+    c.execute("INSERT INTO conversations (username, title) VALUES (?, ?)", (username, data.title))
+    conn.commit()
+    conv_id = c.lastrowid
+    conn.close()
+    return {"status": "success", "id": conv_id}
+
+@app.get("/conversations/{conv_id}")
+async def get_conversation(conv_id: int, token: str = ""):
+    username = get_user_from_token(token)
+    conn = sqlite3.connect("database.db")
+    c = conn.cursor()
+    c.execute("SELECT id FROM conversations WHERE id=? AND username=?", (conv_id, username))
+    if not c.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="会话不存在")
+    c.execute("SELECT role, content, created_at FROM messages WHERE conversation_id=? ORDER BY id", (conv_id,))
+    rows = c.fetchall()
+    conn.close()
+    history = []
+    for r in rows:
+        history.append({"role": r[0], "content": r[1], "time": r[2]})
+    return {"history": history}
 # 1. 挂载静态资源（CSS, JS, 图片等），让浏览器能找到网页的“衣服”
 _static_dir = "rag-ui/dist/assets"
 if os.path.isdir(_static_dir):
