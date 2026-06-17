@@ -374,7 +374,12 @@ async def upload_document(
         chunks = await loop.run_in_executor(None, process_document, file_path)
         
         if chunks is None or not chunks.get("text"):
-            raise HTTPException(status_code=400, detail="文件解析失败、格式不支持或内容为空。")
+            ext_hint = os.path.splitext(file.filename)[1].lower()
+            if ext_hint == '.pdf':
+                detail = "PDF 文件无法提取文本内容（可能为扫描件或图片型 PDF，请上传可选中文字的 PDF 或转换为 docx 格式）。"
+            else:
+                detail = "文件解析失败、格式不支持或内容为空。"
+            raise HTTPException(status_code=400, detail=detail)
             
         chunks["project_name"] = project_name 
         chunks["file_hash"] = file_md5 # 🌟 将数字指纹绑定到这一批切片元数据上
