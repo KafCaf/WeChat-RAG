@@ -92,6 +92,24 @@ class TSDocTextSplitter:
         
         return result
 
+    def split_lines(self, lines: List[str]) -> List[str]:
+        """通用文本行切分：对任意文本行列表做标题检测切分（不限 docx）"""
+        # 包装为伪段落对象
+        class FakePara:
+            def __init__(self, text):
+                self.text = text
+                self.style = FakeStyle()
+        class FakeStyle:
+            name = 'Normal'
+        
+        fake_paras = [FakePara(line) for line in lines if line.strip()]
+        result = self._split_by_headings(fake_paras, use_style=False)
+        if not result:
+            # 标题检测无果，按固定大小兜底
+            all_text = '\n'.join(lines)
+            result = self._simple_split(all_text)
+        return result
+
     def split_text(self, doc: docx.document.Document) -> List[str]:
         paragraphs = list(doc.paragraphs)
         

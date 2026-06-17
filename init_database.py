@@ -54,26 +54,29 @@ def extract_text_from_file(file_path):
                 if para.text.strip():
                     full_text_list.append(para.text.strip())
             
-            # 复用原有的表格语义拼接逻辑
+            # 提取表格内容（通用列标注，不假设表格语义）
             if len(doc.tables) > 0:
                 for table in doc.tables:
-                    if len(table.rows) > 0:
-                        headers = [cell.text.strip().replace("\n", "") for cell in table.rows[0].cells]
-                    else:
+                    if not table.rows:
                         continue
+                    # 提取表头
+                    header_cells = [cell.text.strip().replace("\n", "") for cell in table.rows[0].cells]
+                    header_count = len(header_cells)
                     for i, row in enumerate(table.rows):
-                        if i == 0: continue
+                        if i == 0:
+                            continue
                         row_cells = [cell.text.strip().replace("\n", " ") for cell in row.cells]
-                        if not any(row_cells): continue
-                        row_content_parts = []
+                        if not any(row_cells):
+                            continue
+                        # 补齐合并单元格导致的列数不足
+                        while len(row_cells) < header_count:
+                            row_cells.append("")
+                        parts = []
                         for idx, cell_text in enumerate(row_cells):
                             if cell_text:
-                                current_header = headers[idx] if idx < len(headers) else f"列{idx+1}"
-                                row_content_parts.append(f"【{current_header}】: {cell_text}")
-                        row_semantic_string = "  ".join(row_content_parts)
-                        if len(row_cells) >= 2 and row_cells[0] != row_cells[1]:
-                            row_semantic_string += " (检测到内容变更/对比)"
-                        full_text_list.append(row_semantic_string)
+                                h = header_cells[idx] if idx < header_count else f"列{idx+1}"
+                                parts.append(f"【{h}】{cell_text}")
+                        full_text_list.append("  ".join(parts))
 
         # ---- [格式 2]: PDF 解析 ----
         elif ext == '.pdf':
@@ -133,35 +136,28 @@ def process_document(file_path):
     if not full_text_list:
         return None
     
-    # 步骤二：按格式选择切分策略
+    # 步骤二：通用标题感知切分
     chunk_list = []
+    splitter = TSDocTextSplitter(chunk_size=1200)
     
     if ext == '.docx':
-        # 🌟 使用标题感知切分（按条款/标题边界）
+        # 先尝试 docx 样式+文本双重检测
         try:
             doc = Document(file_path)
-            splitter = TSDocTextSplitter(chunk_size=1200)
             heading_chunks = splitter.split_text(doc)
             for c in heading_chunks:
                 if len(c) > 50:
-                    tagged = f"【来源政策项目：{project_name}】\n" + c
-                    chunk_list.append(tagged)
-            print(f"文件 {Path(file_path).name} 标题感知切片完成，共生成 {len(chunk_list)} 个数据块。")
+                    chunk_list.append(f"【来源政策项目：{project_name}】\n" + c)
+            if chunk_list:
+                print(f"文件 {Path(file_path).name} 标题感知切片完成，共生成 {len(chunk_list)} 个数据块。")
         except Exception as e:
-            print(f"标题感知切分失败 ({e})，回退到固定窗口切分")
-            ext = ''  # 触发回退
+            print(f"标题感知切分失败 ({e})，回退通用模式")
     
-    if ext != '.docx' or not chunk_list:
-        # 回退：固定字符滑动窗口
-        chunk_size = 1200
-        overlap = 300
-        current_text = "\n".join(full_text_list)
-        for i in range(0, len(current_text), chunk_size - overlap):
-            chunk = current_text[i : i + chunk_size]
-            if len(chunk) > 50:
-                tagged_chunk = f"【来源政策项目：{project_name}】\n" + chunk
-                chunk_list.append(tagged_chunk)
-        print(f"文件 {Path(file_path).name} 固定窗口切片完成，共生成 {len(chunk_list)} 个数据块。")
+    if not chunk_list:
+        # 回退：对全部提取文本（段落+表格行）做通用标题检测
+        chunk_list = splitter.split_lines(full_text_list)
+        chunk_list = [f"【来源政策项目：{project_name}】\n" + c for c in chunk_list if len(c) > 50]
+        print(f"文件 {Path(file_path).name} 通用模式切片完成，共生成 {len(chunk_list)} 个数据块。")
 
     chunks["text"] = chunk_list 
     chunks["filename"] = str(Path(file_path).as_posix())
