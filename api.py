@@ -15,7 +15,7 @@ from utils import get_kb_path, list_files_from_folder, list_kbs_from_folder
 from init_database import process_document
 from retrievers.VectorRetriever import VectorRetrieval
 from configs.model_configs import EMBED_CONFIG
-from server.embedding import load_embeddings, CloudEmbedModel
+from server.embedding import CloudEmbedModel
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware # 🌟 引入跨域中间件
 import sqlite3

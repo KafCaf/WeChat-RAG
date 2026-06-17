@@ -1,7 +1,6 @@
 from configs.model_configs import MODEL_PATH, EMBED_CONFIG, SPLITTER_CONFIG
 from utils import detect_device
-from typing import Literal, List, Dict
-from langchain.embeddings.base import Embeddings
+from typing import Literal, List, Dict, Any
 
 
 def embedding_device(device: str = None) -> Literal["cuda", "mps", "cpu"]:
@@ -11,7 +10,7 @@ def embedding_device(device: str = None) -> Literal["cuda", "mps", "cpu"]:
     return device
 
 
-def load_embeddings(model, device) -> Embeddings:
+def load_embeddings(model, device) -> Any:
     if model == "text-embedding-ada-002":
         from langchain.embeddings.openai import OpenAIEmbeddings
         embeddings = OpenAIEmbeddings(model=model,

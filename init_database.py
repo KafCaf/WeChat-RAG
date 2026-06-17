@@ -8,8 +8,8 @@ from configs.model_configs import EMBED_CONFIG
 from utils import list_files_from_folder, list_kbs_from_folder
 from pathlib import Path
 from elasticsearch import Elasticsearch, helpers
-from server.embedding import load_embeddings
-from configs.model_configs import MODEL_PATH, EMBED_CONFIG, SPLITTER_CONFIG
+from server.embedding import CloudEmbedModel
+from configs.model_configs import MODEL_PATH, SPLITTER_CONFIG
 import warnings
 import traceback
 
@@ -187,7 +187,7 @@ if __name__ == "__main__":
 
     if es_client.ping():
         print("Successfully connected to Elasticsearch!")
-        embed_model = load_embeddings(model=EMBED_CONFIG["embed_model"], device=EMBED_CONFIG["embed_device"])
+        embed_model = CloudEmbedModel()
     else:
         print("Could not connect to Elasticsearch.")
         exit(1)
