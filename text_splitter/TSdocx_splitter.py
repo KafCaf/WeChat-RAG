@@ -1,17 +1,36 @@
 import docx
 from typing import List
+import re
 
 class TSDocTextSplitter:
     def __init__(self, chunk_size=1250):
         self.headings = {}
         self.chunk_size = chunk_size
 
+    def _is_heading_text(self, text: str) -> bool:
+        """通过文本模式检测是否为标题/条款边界"""
+        text = text.strip()
+        if not text:
+            return False
+        # "第X条" "第X章" "第X节"
+        if re.match(r'^第[一二三四五六七八九十百千\d]+[条款章节]', text):
+            return True
+        # "一、" "二、" 等中文序号开头
+        if re.match(r'^[一二三四五六七八九十]+[、）)]', text):
+            return True
+        # "（一）" "（二）" 等括号序号
+        if re.match(r'^[（(][一二三四五六七八九十\d]+[）)]', text):
+            return True
+        # 短文本（<30字）可能是标题（如"第一章 总则"）
+        if len(text) < 30 and not text.endswith(('。', '；', '，')):
+            return True
+        return False
+
     def _simple_split(self, text: str) -> List[str]:
-        """简易递归切分，替代 langchain 的 RecursiveCharacterTextSplitter"""
+        """简易递归切分"""
         if len(text) <= self.chunk_size:
             return [text] if text.strip() else []
         
-        # 按段落、句子、逗号、字符优先级切分
         separators = ['\n\n', '\n', '。', '；', '，', ' ']
         for sep in separators:
             if sep in text:
@@ -21,49 +40,68 @@ class TSDocTextSplitter:
                     result.extend(self._simple_split(part))
                 return result
         
-        # 兜底：按字符切
         return [text[i:i+self.chunk_size] for i in range(0, len(text), self.chunk_size)]
 
+    def _split_by_headings(self, paragraphs, use_style=True) -> List[str]:
+        """按标题/条款边界将段落分组"""
+        groups = []
+        current_heading = ''
+        current_content = []
+        
+        for para in paragraphs:
+            text = para.text.strip()
+            if not text:
+                continue
+            
+            is_heading = False
+            if use_style and para.style.name.startswith('Heading'):
+                is_heading = True
+            elif self._is_heading_text(text):
+                is_heading = True
+            
+            if is_heading:
+                if current_content:
+                    groups.append((current_heading, current_content))
+                current_heading = text
+                current_content = []
+            else:
+                current_content.append(text)
+        
+        # 最后一组
+        if current_content:
+            groups.append((current_heading, current_content))
+        elif not groups and current_heading:
+            # 只有标题没有内容的边界情况
+            pass
+        
+        # 如果只有一组，说明标题检测失败，退回原始方式
+        if len(groups) <= 1:
+            return []
+        
+        # 切分各组内容
+        result = []
+        for heading, content in groups:
+            content_text = '\n'.join(content)
+            split_parts = self._simple_split(content_text)
+            for part in split_parts:
+                prefix = f"{heading}\n" if heading else ''
+                result.append(prefix + part)
+        
+        return result
+
     def split_text(self, doc: docx.document.Document) -> List[str]:
-        headings_content = []
-        for para in doc.paragraphs:
-            if para.style.name.startswith('Heading'):
-                cur_heading_level = int(para.style.name.split()[-1])
-                cur_heading = para.text
-                self.headings[cur_heading_level] = cur_heading
-
-                # 原始逻辑（可能在缺失中间层级标题时抛出 KeyError）
-                # if cur_heading_level > 1:
-                #     heading = ''
-                #     for level in range(1, cur_heading_level):
-                #         heading += '{last_heading}\n'.format(last_heading=self.headings[level])
-                #     heading += cur_heading
-                #     cur_heading = heading
-
-                # 容错逻辑：如果某个上级标题不存在，则跳过该层级，避免 KeyError
-                if cur_heading_level > 1:
-                    heading = ''
-                    for level in range(1, cur_heading_level):
-                        last_heading = self.headings.get(level)
-                        if last_heading:
-                            heading += f"{last_heading}\n"
-                    heading += cur_heading
-                    cur_heading = heading
-
-                headings_content.append((cur_heading, []))
-
-            elif headings_content:
-                headings_content[-1][1].append(para.text)
+        paragraphs = list(doc.paragraphs)
         
-        split_headdings_content = []
+        # 先尝试样式检测
+        result = self._split_by_headings(paragraphs, use_style=True)
+        if result:
+            return result
         
-        for heading, content in headings_content:
-            split_content = self._simple_split('\n'.join(content))
-            for c in split_content:
-                split_headdings_content.append((heading, c))
+        # 样式检测失败，回退到文本模式检测
+        result = self._split_by_headings(paragraphs, use_style=False)
+        if result:
+            return result
         
-        
-        return self.concatenate_heading_content(split_headdings_content)
-
-    def concatenate_heading_content(self, data):
-        return [f"{heading}\n" + ''.join(content) for heading,content in data]
+        # 都失败，当做纯文本按固定大小切分
+        all_text = '\n'.join(p.text for p in paragraphs if p.text.strip())
+        return self._simple_split(all_text)
