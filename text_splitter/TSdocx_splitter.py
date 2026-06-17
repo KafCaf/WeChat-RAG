@@ -62,8 +62,11 @@ class TSDocTextSplitter:
             if is_heading:
                 if current_content:
                     groups.append((current_heading, current_content))
-                current_heading = text
-                current_content = []
+                    current_heading = text
+                    current_content = []
+                else:
+                    # 连续标题（如"第一章"后紧跟"第一条"），拼接标题前缀
+                    current_heading = (current_heading + ' / ' + text) if current_heading else text
             else:
                 current_content.append(text)
         
