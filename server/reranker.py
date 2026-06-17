@@ -20,7 +20,7 @@ def get_rerank_scores(model, tokenizer, query, docs):
         return scores.tolist()
 
 
-# ==================== 云端 Reranker API (百炼 gte-rerank) ====================
+# ==================== 云端 Reranker API (百炼 qwen-rerank) ====================
 
 import os as _os
 import requests as _requests
@@ -32,7 +32,7 @@ def cloud_rerank(query: str, documents: list, api_key: str = None, model: str = 
     返回: [(doc_index, relevance_score), ...] 按分数降序排列
     """
     api_key = api_key or _os.getenv("DASHSCOPE_API_KEY", "")
-    model = model or _os.getenv("DASHSCOPE_RERANK_MODEL", "gte-rerank")
+    model = model or _os.getenv("DASHSCOPE_RERANK_MODEL", "qwen3-rerank")
     url = _os.getenv("DASHSCOPE_RERANK_URL",
                      "https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank")
 
