@@ -13,7 +13,7 @@ class TSDocTextSplitter:
         if not text:
             return False
         # "第X条" "第X章" "第X节"
-        if re.match(r'^第[一二三四五六七八九十百千\d]+[条款章节]', text):
+        if re.match(r'^(?:【[^】]*】)?\s*第[一二三四五六七八九十百千\d]+[条款章节]', text):
             return True
         # "一、" "二、" 等中文序号开头
         if re.match(r'^[一二三四五六七八九十]+[、）)]', text):

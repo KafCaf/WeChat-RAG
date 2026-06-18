@@ -13,6 +13,7 @@ from configs.model_configs import MODEL_PATH, SPLITTER_CONFIG
 from text_splitter.TSdocx_splitter import TSDocTextSplitter
 import warnings
 import traceback
+import re
 
 warnings.filterwarnings("ignore")
 retrieval_classes = {
