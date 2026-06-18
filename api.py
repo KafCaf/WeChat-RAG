@@ -253,10 +253,10 @@ async def chat_and_rag(request: ChatRequest):
         if request.token and request.token.startswith("token_"):
             username = request.token[6:]
             if not conv_id:
-                conv_id = get_or_create_conversation(username)
+                title = request.message[:20] + ("..." if len(request.message) > 20 else "")
+                conv_id = get_or_create_conversation(username, request.project_name, title)
             conn = sqlite3.connect("database.db")
             c = conn.cursor()
-            # 同步项目名到会话
             if request.project_name:
                 c.execute("UPDATE conversations SET project_name=? WHERE id=?", (request.project_name, conv_id))
             c.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, 'user', ?)", (conv_id, request.message))
@@ -478,16 +478,19 @@ def get_user_from_token(token: str) -> str:
         return token[6:]
     raise HTTPException(status_code=401, detail="未登录")
 
-def get_or_create_conversation(username: str) -> int:
+def get_or_create_conversation(username: str, project_name: str = None, title: str = "新对话") -> int:
     """获取用户最近会话，没有则创建"""
     conn = sqlite3.connect("database.db")
     c = conn.cursor()
-    c.execute("SELECT id FROM conversations WHERE username=? ORDER BY id DESC LIMIT 1", (username,))
+    if project_name:
+        c.execute("SELECT id FROM conversations WHERE username=? AND project_name=? ORDER BY id DESC LIMIT 1", (username, project_name))
+    else:
+        c.execute("SELECT id FROM conversations WHERE username=? ORDER BY id DESC LIMIT 1", (username,))
     row = c.fetchone()
     if row:
         conv_id = row[0]
     else:
-        c.execute("INSERT INTO conversations (username) VALUES (?)", (username,))
+        c.execute("INSERT INTO conversations (username, title, project_name) VALUES (?, ?, ?)", (username, title, project_name))
         conn.commit()
         conv_id = c.lastrowid
     conn.close()
@@ -540,6 +543,20 @@ async def get_conversation(conv_id: int, token: str = ""):
     proj_row = c.fetchone()
     conn.close()
     return {"history": history, "project_name": proj_row[0] if proj_row else None}
+
+@app.patch("/conversations/{conv_id}")
+async def rename_conversation(conv_id: int, data: ConversationCreate, token: str = ""):
+    username = get_user_from_token(token)
+    conn = sqlite3.connect("database.db")
+    c = conn.cursor()
+    c.execute("SELECT id FROM conversations WHERE id=? AND username=?", (conv_id, username))
+    if not c.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="会话不存在")
+    c.execute("UPDATE conversations SET title=? WHERE id=?", (data.title, conv_id))
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
 
 @app.delete("/conversations/{conv_id}")
 async def delete_conversation(conv_id: int, token: str = ""):
