@@ -31,15 +31,16 @@ export default function App() {
   useEffect(() => {
     if (token) {
       fetchProjects();
-      loadConversationHistory(token);
     }
   }, [token]);
 
   useEffect(() => {
     if (token && currentProject) {
       loadConversationHistory(token, currentProject);
+    } else if (token) {
+      loadConversationHistory(token);
     }
-  }, [currentProject]);
+  }, [currentProject, token]);
 
   const fetchProjects = async () => {
     try {
@@ -108,6 +109,15 @@ export default function App() {
     }
   };
 
+  const switchConversation = async (convId) => {
+    setConversationId(convId);
+    const r = await fetch(`${API_BASE}/conversations/${convId}?token=${token}`);
+    const d = await r.json();
+    const msgs = [{ role: 'welcome', content: `Welcome! ${username}` }];
+    (d.history || []).forEach(h => msgs.push({ role: h.role === 'assistant' ? 'bot' : h.role, content: h.content }));
+    setMessages(msgs);
+  };
+
   const newConversation = async () => {
     const name = prompt('对话名称：', currentProject || '新对话');
     if (!name) return;
@@ -118,7 +128,7 @@ export default function App() {
     const data = await res.json();
     if (data.id) {
       setConversationId(data.id);
-      setConversations(prev => [{ id: data.id, title: name, created_at: new Date().toISOString() }, ...prev]);
+      setConversations(prev => [{ id: data.id, title: name, created_at: new Date().toISOString(), project_name: currentProject }, ...prev]);
       setMessages([{ role: 'welcome', content: `Welcome! ${username}` }]);
     }
   };
@@ -138,24 +148,24 @@ export default function App() {
       const url = forProject ? `${API_BASE}/conversations?token=${authToken}&project_name=${encodeURIComponent(forProject)}` : `${API_BASE}/conversations?token=${authToken}`;
       const res = await fetch(url);
       const data = await res.json();
-      if (data.conversations && data.conversations.length > 0) {
-        setConversations(data.conversations);
-        if (forProject) {
-          const lastConv = data.conversations[0];
-          setConversationId(lastConv.id);
-          const histRes = await fetch(`${API_BASE}/conversations/${lastConv.id}?token=${authToken}`);
-          const histData = await histRes.json();
-          if (histData.history && histData.history.length > 0) {
-            const msgs = [{ role: 'welcome', content: `Welcome! ${username}` }];
-            for (const h of histData.history) {
-              msgs.push({ role: h.role === 'assistant' ? 'bot' : h.role, content: h.content });
-            }
-            setMessages(msgs);
-            return;
+      setConversations(data.conversations || []);
+      if (forProject && data.conversations && data.conversations.length > 0) {
+        const lastConv = data.conversations[0];
+        setConversationId(lastConv.id);
+        const histRes = await fetch(`${API_BASE}/conversations/${lastConv.id}?token=${authToken}`);
+        const histData = await histRes.json();
+        if (histData.history && histData.history.length > 0) {
+          const msgs = [{ role: 'welcome', content: `Welcome! ${username}` }];
+          for (const h of histData.history) {
+            msgs.push({ role: h.role === 'assistant' ? 'bot' : h.role, content: h.content });
           }
+          setMessages(msgs);
+          return;
         }
       }
-      setMessages([{ role: 'welcome', content: `Welcome! ${username}` }]);
+      if (!conversationId) {
+        setMessages([{ role: 'welcome', content: `Welcome! ${username}` }]);
+      }
     } catch (e) {
       setMessages([{ role: 'welcome', content: `Welcome! ${username}` }]);
     }
@@ -322,14 +332,7 @@ export default function App() {
             {conversations.length > 0 ? (
             <div className="max-h-40 overflow-y-auto space-y-1">
               {conversations.map(c => (
-                <div key={c.id} onClick={async () => {
-                    setConversationId(c.id);
-                    const r = await fetch(`${API_BASE}/conversations/${c.id}?token=${token}`);
-                    const d = await r.json();
-                    const msgs = [{ role: 'welcome', content: `Welcome! ${username}` }];
-                    (d.history || []).forEach(h => msgs.push({ role: h.role === 'assistant' ? 'bot' : h.role, content: h.content }));
-                    setMessages(msgs);
-                  }} className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs cursor-pointer transition-all ${c.id === conversationId ? 'bg-blue-600/30 text-blue-200' : 'text-slate-400 hover:bg-slate-800'}`}>
+                <div key={c.id} onClick={() => switchConversation(c.id)} className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs cursor-pointer transition-all ${c.id === conversationId ? 'bg-blue-600/30 text-blue-200' : 'text-slate-400 hover:bg-slate-800'}`}>
                   <span className="truncate flex-1">{c.title}</span>
                   <button onClick={(e) => { e.stopPropagation(); deleteConversation(c.id); }} className="text-slate-600 hover:text-red-400 ml-1">&times;</button>
                 </div>
