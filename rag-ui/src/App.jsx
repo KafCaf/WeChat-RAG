@@ -26,6 +26,7 @@ export default function App() {
   const [newProjectName, setNewProjectName] = useState('');
   const [useNewProject, setUseNewProject] = useState(false);
   const fileInputRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
   // --- 2. 初始化与监听 ---
   useEffect(() => {
@@ -55,7 +56,7 @@ export default function App() {
           setCurrentProject(filtered[0]);
         }
       }
-    } catch (err) {
+    } catch (_err) {
       console.error("获取项目列表失败", err);
     }
   };
@@ -91,7 +92,7 @@ export default function App() {
       } else {
         alert(data.detail || (isRegisterMode ? '注册失败' : '登录失败，请检查账号密码'));
       }
-    } catch (err) {
+    } catch (_err) {
       alert('无法连接到服务器，请检查后端运行状态。');
     } finally {
       setIsLoggingIn(false);
@@ -116,6 +117,7 @@ export default function App() {
     const msgs = [{ role: 'welcome', content: `Welcome! ${username}` }];
     (d.history || []).forEach(h => msgs.push({ role: h.role === 'assistant' ? 'bot' : h.role, content: h.content }));
     setMessages(msgs);
+    scrollToBottom();
   };
 
   const newConversation = async () => {
@@ -130,6 +132,7 @@ export default function App() {
       setConversationId(data.id);
       setConversations(prev => [{ id: data.id, title: name, created_at: new Date().toISOString(), project_name: currentProject }, ...prev]);
       setMessages([{ role: 'welcome', content: `Welcome! ${username}` }]);
+      scrollToBottom();
     }
   };
 
@@ -166,9 +169,14 @@ export default function App() {
       if (!conversationId) {
         setMessages([{ role: 'welcome', content: `Welcome! ${username}` }]);
       }
-    } catch (e) {
+    } catch (_e) {
       setMessages([{ role: 'welcome', content: `Welcome! ${username}` }]);
     }
+  };
+
+
+  const scrollToBottom = () => {
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   };
 
   // --- 4. 聊天与文件逻辑 ---
@@ -212,7 +220,8 @@ export default function App() {
       if (!res.ok) throw new Error(data.detail || '请求失败');
       setMessages([...newMessages, { role: 'bot', content: data.answer }]);
       if (data.conversation_id) setConversationId(data.conversation_id);
-    } catch (err) {
+      scrollToBottom();
+    } catch (_err) {
       setMessages([...newMessages, { role: 'bot', content: `⚠️ 出错了: ${err.message}` }]);
     } finally {
       setIsChatting(false);
@@ -240,7 +249,7 @@ export default function App() {
         alert(`✅ ${data.message}`);
         if (useNewProject) { fetchProjects(); setNewProjectName(''); setUseNewProject(false); }
       } else alert(`❌ ${data.detail}`);
-    } catch (err) {
+    } catch (_err) {
       alert("⚠️ 文件上传失败。");
     } finally {
       setIsUploading(false);
@@ -389,7 +398,7 @@ export default function App() {
           <div className="max-w-3xl mx-auto w-full h-full">
             
             {/* 消息渲染列表 */}
-            {messages.map((msg, idx) => {
+            {(messages.length > 1 ? messages.filter(m => m.role !== 'welcome') : messages).map((msg, idx) => {
               // 🌟 Gemini 风格欢迎页
               if (msg.role === 'welcome') {
                 return (
@@ -417,6 +426,7 @@ export default function App() {
                 </div>
               );
             })}
+            <div ref={messagesEndRef} />
             
             {isChatting && (
                <div className="flex gap-5 mb-8">
