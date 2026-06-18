@@ -27,9 +27,8 @@ services:
     build: .
     container_name: rag-backend
     environment:
-      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
-      - TARGET_MODEL=${TARGET_MODEL:-deepseek-chat}
+      - TARGET_MODEL=${TARGET_MODEL:-deepseek-v4-flash}
       - DASHSCOPE_EMBED_MODEL=${DASHSCOPE_EMBED_MODEL:-text-embedding-v4}
       - DASHSCOPE_RERANK_MODEL=${DASHSCOPE_RERANK_MODEL:-qwen3-rerank}
       - ES_INDEX=${ES_INDEX:-index_user_test}

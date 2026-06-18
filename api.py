@@ -40,10 +40,9 @@ retriever = None
 http_client = None
 
 # API Key 和 URL 均通过环境变量读取，不硬编码
-# DeepSeek API (兼容 OpenAI 格式)
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-DEEPSEEK_API_URL = os.getenv("DEEPSEEK_API_URL", "https://api.deepseek.com/v1/chat/completions")
-TARGET_MODEL = os.getenv("TARGET_MODEL", "deepseek-chat")  # DeepSeek V4 Flash
+# 阿里云百炼 DeepSeek LLM API (兼容 OpenAI 格式)
+DASHSCOPE_LLM_URL = os.getenv("DASHSCOPE_LLM_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions")
+TARGET_MODEL = os.getenv("TARGET_MODEL", "deepseek-v4-flash")
 # 阿里云百炼 Embedding API
 DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY", "")
 DASHSCOPE_EMBED_URL = os.getenv("DASHSCOPE_EMBED_URL", "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding")
@@ -96,10 +95,10 @@ async def lifespan(app: FastAPI):
             "messages": [{"role": "system", "content": "1"}],
             "max_tokens": 1
         }
-        headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
+        headers = {"Authorization": f"Bearer {DASHSCOPE_API_KEY}", "Content-Type": "application/json"}
         
         _ = await asyncio.wait_for(
-            http_client.post(DEEPSEEK_API_URL, json=dummy_payload, headers=headers),
+            http_client.post(DASHSCOPE_LLM_URL, json=dummy_payload, headers=headers),
             timeout=10.0
         )
         print(f"     完成，耗时: {time.time() - start_t:.2f}s")
@@ -228,13 +227,13 @@ async def chat_and_rag(request: ChatRequest):
         }
         
         headers = {
-            "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+            "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
             "Content-Type": "application/json"
         }
         
         # 优化项2：记录 LLM 请求耗时
         start_llm_time = time.time()
-        response = await http_client.post(DEEPSEEK_API_URL, json=payload, headers=headers)
+        response = await http_client.post(DASHSCOPE_LLM_URL, json=payload, headers=headers)
         llm_time = time.time() - start_llm_time
         
         print(f"[性能监控] 检索耗时: {retrieval_time:.2f}s | LLM API耗时: {llm_time:.2f}s")
