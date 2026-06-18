@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, User, Cpu, Lock, Loader2, LogOut, Database, FolderGit2, UploadCloud, UserPlus, Sparkles, MessageSquare } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 // API 地址留空，适配 FastAPI 挂载模式
 const API_BASE = ''; 
@@ -176,7 +177,7 @@ export default function App() {
 
 
   const scrollToBottom = () => {
-    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 300);
   };
 
   // --- 4. 聊天与文件逻辑 ---
@@ -219,7 +220,13 @@ export default function App() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || '请求失败');
       setMessages([...newMessages, { role: 'bot', content: data.answer }]);
-      if (data.conversation_id) setConversationId(data.conversation_id);
+      if (data.conversation_id) {
+        setConversationId(data.conversation_id);
+        setConversations(prev => {
+          if (prev.find(c => c.id === data.conversation_id)) return prev;
+          return [{ id: data.conversation_id, title: userMsg.slice(0, 20), project_name: currentProject, created_at: new Date().toISOString() }, ...prev];
+        });
+      }
       scrollToBottom();
     } catch (_err) {
       setMessages([...newMessages, { role: 'bot', content: `⚠️ 出错了: ${err.message}` }]);
@@ -341,9 +348,12 @@ export default function App() {
             {conversations.length > 0 ? (
             <div className="max-h-40 overflow-y-auto space-y-1">
               {conversations.map(c => (
-                <div key={c.id} onClick={() => switchConversation(c.id)} className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs cursor-pointer transition-all ${c.id === conversationId ? 'bg-blue-600/30 text-blue-200' : 'text-slate-400 hover:bg-slate-800'}`}>
-                  <span className="truncate flex-1">{c.title}</span>
-                  <button onClick={(e) => { e.stopPropagation(); deleteConversation(c.id); }} className="text-slate-600 hover:text-red-400 ml-1">&times;</button>
+                <div key={c.id} onClick={() => switchConversation(c.id)} className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs cursor-pointer transition-all group ${c.id === conversationId ? 'bg-blue-600/30 text-blue-200' : 'text-slate-400 hover:bg-slate-800'}`}>
+                  <span className="truncate flex-1" onDoubleClick={() => { const t = prompt('新名称:', c.title); if (t) renameConversation(c.id, t); }}>{c.title}</span>
+                  <span className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={(e) => { e.stopPropagation(); const t = prompt('新名称:', c.title); if (t) renameConversation(c.id, t); }} className="text-slate-500 hover:text-blue-400 text-[10px]" title="重命名">&#9998;</button>
+                    <button onClick={(e) => { e.stopPropagation(); deleteConversation(c.id); }} className="text-slate-500 hover:text-red-400 text-[10px]" title="删除">&times;</button>
+                  </span>
                 </div>
               ))}
             </div>
@@ -407,7 +417,7 @@ export default function App() {
                        <Sparkles className="text-blue-600" size={56} />
                     </div>
                     <h2 className="text-6xl font-black bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 bg-clip-text text-transparent mb-6 tracking-tighter">
-                      {msg.content}
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </h2>
                     <p className="text-slate-400 text-xl font-medium max-w-md">今天我该如何协助您的科研工作？请在下方提问。</p>
                   </div>
@@ -421,7 +431,7 @@ export default function App() {
                     {msg.role === 'user' ? <User size={20} /> : <Cpu size={20} />}
                   </div>
                   <div className={`px-5 py-4 rounded-2xl max-w-[85%] text-base leading-relaxed whitespace-pre-wrap shadow-sm border ${msg.role === 'user' ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-800 border-slate-100'}`}>
-                    {msg.content}
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
                 </div>
               );
