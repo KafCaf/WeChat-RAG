@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, User, Cpu, Lock, Loader2, LogOut, Database, FolderGit2, UploadCloud, UserPlus, Sparkles } from 'lucide-react';
+import { Send, User, Cpu, Lock, Loader2, LogOut, Database, FolderGit2, UploadCloud, UserPlus, Sparkles, MessageSquare } from 'lucide-react';
 
 // API 地址留空，适配 FastAPI 挂载模式
 const API_BASE = ''; 
@@ -15,24 +15,31 @@ export default function App() {
   const [isRegisterMode, setIsRegisterMode] = useState(false); // 登录/注册模式切换
 
   const [messages, setMessages] = useState([]);
+  const [conversationId, setConversationId] = useState(null);
+  const [conversations, setConversations] = useState([]);
   const [input, setInput] = useState('');
   const [isChatting, setIsChatting] = useState(false);
 
   const [projects, setProjects] = useState([]);
   const [currentProject, setCurrentProject] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [useNewProject, setUseNewProject] = useState(false);
   const fileInputRef = useRef(null);
 
   // --- 2. 初始化与监听 ---
   useEffect(() => {
     if (token) {
       fetchProjects();
-      // 如果消息列表为空，初始化 Gemini 风格欢迎语
-      if (messages.length === 0) {
-        setMessages([{ role: 'welcome', content: `Welcome! ${username}` }]);
-      }
+      loadConversationHistory(token);
     }
   }, [token]);
+
+  useEffect(() => {
+    if (token && currentProject) {
+      loadConversationHistory(token, currentProject);
+    }
+  }, [currentProject]);
 
   const fetchProjects = async () => {
     try {
@@ -76,8 +83,9 @@ export default function App() {
           setUsername(data.username);
           localStorage.setItem('token', data.token);
           localStorage.setItem('username', data.username);
-          // 登录成功瞬间：重置消息列表并显示欢迎语
-          setMessages([{ role: 'welcome', content: `Welcome! ${data.username}` }]);
+          // 登录后加载最近会话的历史消息
+          loadConversationHistory(data.token);
+          setConversationId(null);
         }
       } else {
         alert(data.detail || (isRegisterMode ? '注册失败' : '登录失败，请检查账号密码'));
@@ -89,6 +97,32 @@ export default function App() {
     }
   };
 
+
+  const deleteConversation = async (id) => {
+    if (!confirm('确定删除这个会话？')) return;
+    await fetch(`${API_BASE}/conversations/${id}?token=${token}`, { method: 'DELETE' });
+    setConversations(prev => prev.filter(c => c.id !== id));
+    if (conversationId === id) {
+      setConversationId(null);
+      setMessages([{ role: 'welcome', content: `Welcome! ${username}` }]);
+    }
+  };
+
+  const newConversation = async () => {
+    const name = prompt('对话名称：', currentProject || '新对话');
+    if (!name) return;
+    const res = await fetch(`${API_BASE}/conversations?token=${token}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: name, project_name: currentProject || null })
+    });
+    const data = await res.json();
+    if (data.id) {
+      setConversationId(data.id);
+      setConversations(prev => [{ id: data.id, title: name, created_at: new Date().toISOString() }, ...prev]);
+      setMessages([{ role: 'welcome', content: `Welcome! ${username}` }]);
+    }
+  };
+
   const handleLogout = () => {
     setToken('');
     setUsername('');
@@ -96,6 +130,35 @@ export default function App() {
     localStorage.removeItem('username');
     // 退出时：设置退出提示，确保下次进入不会残留之前的对话
     setMessages([{ role: 'bot', content: '已退出登录。期待下次见面！' }]);
+  };
+
+
+  const loadConversationHistory = async (authToken, forProject = '') => {
+    try {
+      const url = forProject ? `${API_BASE}/conversations?token=${authToken}&project_name=${encodeURIComponent(forProject)}` : `${API_BASE}/conversations?token=${authToken}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.conversations && data.conversations.length > 0) {
+        setConversations(data.conversations);
+        if (forProject) {
+          const lastConv = data.conversations[0];
+          setConversationId(lastConv.id);
+          const histRes = await fetch(`${API_BASE}/conversations/${lastConv.id}?token=${authToken}`);
+          const histData = await histRes.json();
+          if (histData.history && histData.history.length > 0) {
+            const msgs = [{ role: 'welcome', content: `Welcome! ${username}` }];
+            for (const h of histData.history) {
+              msgs.push({ role: h.role === 'assistant' ? 'bot' : h.role, content: h.content });
+            }
+            setMessages(msgs);
+            return;
+          }
+        }
+      }
+      setMessages([{ role: 'welcome', content: `Welcome! ${username}` }]);
+    } catch (e) {
+      setMessages([{ role: 'welcome', content: `Welcome! ${username}` }]);
+    }
   };
 
   // --- 4. 聊天与文件逻辑 ---
@@ -129,13 +192,16 @@ export default function App() {
           history: history,
           project_name: currentProject, 
           top_k: 5,
-          temperature: 0.1
+          temperature: 0.1,
+          token: token,
+          conversation_id: conversationId
         })
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || '请求失败');
       setMessages([...newMessages, { role: 'bot', content: data.answer }]);
+      if (data.conversation_id) setConversationId(data.conversation_id);
     } catch (err) {
       setMessages([...newMessages, { role: 'bot', content: `⚠️ 出错了: ${err.message}` }]);
     } finally {
@@ -146,21 +212,24 @@ export default function App() {
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!currentProject) {
-      alert("请先从列表选择一个具体的知识库进行存储。");
+    const targetProject = useNewProject ? newProjectName.trim() : currentProject;
+    if (!targetProject) {
+      alert("请选择已有项目或输入新项目名称。");
       return;
     }
 
     setIsUploading(true);
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('project_name', currentProject); 
+    formData.append('project_name', targetProject); 
 
     try {
       const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
       const data = await res.json();
-      if (res.ok) alert(`✅ ${data.message}`);
-      else alert(`❌ ${data.detail}`);
+      if (res.ok) {
+        alert(`✅ ${data.message}`);
+        if (useNewProject) { fetchProjects(); setNewProjectName(''); setUseNewProject(false); }
+      } else alert(`❌ ${data.detail}`);
     } catch (err) {
       alert("⚠️ 文件上传失败。");
     } finally {
@@ -174,7 +243,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 p-4 font-sans">
         <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-100 transform transition-all">
-          <h2 className="text-4xl font-extrabold text-center text-slate-800 mb-2 mt-6 tracking-tight">HUST-Insight</h2>
+          <h2 className="text-4xl font-extrabold text-center text-slate-800 mb-2 mt-6 tracking-tight">智能问答系统（测试）</h2>
           <p className="text-center text-slate-500 mb-10 text-sm">
             {isRegisterMode ? '创建您的专属知识库账号' : '请登录以访问智能知识库系统'}
           </p>
@@ -219,7 +288,7 @@ export default function App() {
       <div className="w-72 bg-slate-900 text-slate-300 flex flex-col hidden md:flex shadow-inner">
         <div className="p-6 flex items-center gap-3 border-b border-slate-800">
           <Database className="text-blue-400" size={24} />
-          <h1 className="text-xl font-black text-white tracking-tighter">HUST-Insight</h1>
+          <h1 className="text-xl font-black text-white tracking-tighter">智能问答系统（测试）</h1>
         </div>
         
         <div className="flex-1 p-6 space-y-8 overflow-y-auto">
@@ -241,11 +310,49 @@ export default function App() {
             </select>
           </div>
 
-          {/* 上传区域 */}
           <div className="border-t border-slate-800 pt-8">
+{/* 会话列表 */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                <MessageSquare size={14} /> 历史会话
+              </div>
+              <button onClick={newConversation} className="text-xs text-blue-400 hover:text-blue-300">+ 新建</button>
+            </div>
+            {conversations.length > 0 ? (
+            <div className="max-h-40 overflow-y-auto space-y-1">
+              {conversations.map(c => (
+                <div key={c.id} onClick={async () => {
+                    setConversationId(c.id);
+                    const r = await fetch(`${API_BASE}/conversations/${c.id}?token=${token}`);
+                    const d = await r.json();
+                    const msgs = [{ role: 'welcome', content: `Welcome! ${username}` }];
+                    (d.history || []).forEach(h => msgs.push({ role: h.role === 'assistant' ? 'bot' : h.role, content: h.content }));
+                    setMessages(msgs);
+                  }} className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs cursor-pointer transition-all ${c.id === conversationId ? 'bg-blue-600/30 text-blue-200' : 'text-slate-400 hover:bg-slate-800'}`}>
+                  <span className="truncate flex-1">{c.title}</span>
+                  <button onClick={(e) => { e.stopPropagation(); deleteConversation(c.id); }} className="text-slate-600 hover:text-red-400 ml-1">&times;</button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-600">暂无会话</p>
+          )}
+          </div>
+
+          <div className="border-t border-slate-800 pt-4">
              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase mb-4 tracking-widest">
               <UploadCloud size={14} /> 知识入库
             </div>
+            <div className="flex gap-1 mb-3">
+              <button onClick={() => setUseNewProject(false)} className={"text-xs px-3 py-1 rounded-full transition-all " + (!useNewProject ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-400')}>已有项目</button>
+              <button onClick={() => setUseNewProject(true)} className={"text-xs px-3 py-1 rounded-full transition-all " + (useNewProject ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-400')}>新建项目</button>
+            </div>
+            {useNewProject ? (
+              <input type="text" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="输入新项目名称..." className="w-full mb-3 px-4 py-2 bg-slate-800 text-white rounded-xl text-sm outline-none border border-slate-700 focus:border-blue-500" />
+            ) : (
+              <p className="text-xs text-slate-500 mb-3">入库到：{currentProject || '未选择'}</p>
+            )}
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".txt,.pdf,.md,.docx" />
             <button 
               onClick={() => fileInputRef.current?.click()}
@@ -255,6 +362,7 @@ export default function App() {
               {isUploading ? <Loader2 className="animate-spin" size={18} /> : <UploadCloud size={18} />}
               {isUploading ? '解析中...' : '选择文件上传'}
             </button>
+          </div>
           </div>
         </div>
 
@@ -337,7 +445,7 @@ export default function App() {
               <Send size={22} />
             </button>
           </div>
-          <p className="text-center text-xs text-slate-400 mt-4 font-medium uppercase tracking-widest">Powered by HUST Electronic Information Engineering</p>
+          <p className="text-center text-xs text-slate-400 mt-4 font-medium uppercase tracking-widest">Powered by HUST</p>
         </div>
       </div>
 
