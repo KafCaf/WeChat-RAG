@@ -248,15 +248,7 @@ async def chat_and_rag(request: ChatRequest):
         raw_answer = result_json["choices"][0]["message"]["content"].strip()
         # 去除 Markdown 加粗标记（前端不渲染 Markdown）
         raw_answer = raw_answer.replace("**", "")
-        source_text = ""
-        if "参考信息中未提及" not in raw_answer:
-            if context_list and context != "未能在知识库中找到相关背景知识。":
-                source_text = "\n\n参考来源：\n"
-                for i, c in enumerate(context_list):
-                    snippet = c[:100].replace('\n', ' ') + "..." if len(c) > 100 else c.replace('\n', ' ')
-                    source_text += f"[{i+1}] {snippet}\n"
-
-        full_answer = raw_answer + source_text
+        full_answer = raw_answer
 
         # 存储消息
         conv_id = request.conversation_id
