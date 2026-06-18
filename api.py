@@ -246,8 +246,6 @@ async def chat_and_rag(request: ChatRequest):
             
         result_json = response.json()
         raw_answer = result_json["choices"][0]["message"]["content"].strip()
-        # 去除 Markdown 加粗标记（前端不渲染 Markdown）
-        raw_answer = raw_answer.replace("**", "")
         full_answer = raw_answer
 
         # 存储消息
