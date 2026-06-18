@@ -4,7 +4,7 @@
 RAG 智能问答系统，面向政策文档。三项目（国际杰青计划 + 科技部培训班 + 选房通知），69 chunks。双前端（React + 微信小程序）。
 
 ## 架构
-- LLM: DeepSeek V4 Flash (deepseek-chat)，HTTP API
+- LLM: 阿里云百炼 DeepSeek V4 Flash (deepseek-v4-flash)，HTTP API
 - Embedding: 百炼 text-embedding-v4，HTTP API
 - Reranker: 百炼 qwen3-rerank，HTTP API
 - ES: Elasticsearch 8.17.1 + IK 中文分词 (ik_smart)，1GB JVM 堆
