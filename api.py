@@ -146,55 +146,13 @@ async def chat_and_rag(request: ChatRequest):
     try:
         loop = asyncio.get_running_loop()
 
-#         expansion_prompt = f"""请分析以下用户的搜索查询，生成3个同义搜索词或相关查询的扩展组合（涵盖口语、专业术语等），以帮助搜索引擎召回更多相关文档。
-# 直接输出这3个查询词，使用“|”符号分隔，不要输出任何其他解释性文字。
-# 用户查询：{request.message}"""
-
-# 1. 提取上一轮的对话上下文，用于指代消解
-        context_hint = ""
-        if request.history:
-            # 只取最后一轮对话提供背景
-            last_user, last_bot = request.history[-1]
-            # 截断太长的机器回复，保留前200字即可
-            short_bot = last_bot[:200] + "..." if len(last_bot) > 200 else last_bot
-            context_hint = f"【上一轮对话参考】\n用户问：{last_user}\n系统答：{short_bot}\n\n"
-
-        # 2. 将上下文拼接到扩展提示词中
-        expansion_prompt = f"""请结合【上一轮对话参考】（如果有），分析用户的【最新查询】。
-如果最新查询包含代词（如“上面”、“这个”、“那条”），请结合参考对话将其还原为完整的搜索意图。
-生成3个同义搜索词或相关查询的扩展组合，以帮助搜索引擎召回更多相关文档。
-直接输出这3个查询词，使用“|”符号分隔，不要输出任何其他解释性文字。
-
-{context_hint}【最新查询】：{request.message}"""
-
-        expansion_payload = {
-            "model": TARGET_MODEL,
-            "messages": [{"role": "user", "content": expansion_prompt}],
-            "temperature": 0.3, # 稍微给点温度，增加发散性
-            "max_tokens": 100
-        }
-        
-        headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-        
-        # 异步调用大模型进行扩展
-        exp_response = await http_client.post(DEEPSEEK_API_URL, json=expansion_payload, headers=headers)
-        if exp_response.status_code == 200:
-            expanded_text = exp_response.json()["choices"][0]["message"]["content"].strip()
-            # 将原始问题与扩展词拼接，形成更丰富的召回 Query
-            enhanced_query = f"{request.message} | {expanded_text}"
-        else:
-            # 如果扩展失败，平滑退化为使用原始请求
-            enhanced_query = request.message
-            
-        print(f"[意图扩展] 原始: {request.message} -> 扩展后: {enhanced_query}")
-        
         # 优化项2：记录检索阶段耗时
         start_retrieval_time = time.time()
         search_result = await loop.run_in_executor(
             None,
             retriever.search_rrf, 
             CURRENT_INDEX, 
-            enhanced_query, # <--- 这里！把 request.message 替换为刚刚生成的 enhanced_query
+            request.message,
             40,
             request.top_k, 
             request.project_name
@@ -242,14 +200,13 @@ async def chat_and_rag(request: ChatRequest):
 回答：【2025年修改稿】第五条将国籍要求从"重点国别清单"改为"'一带一路'共建国家及其他发展中国家"，工作所在地从"国籍所在国"放宽为"开放国别"。
 
 【示例 4 - 泛摘要型】：
-用户：专硕的相关通知
-背景知识：包含选房时间、操作要求、链接、名单等多段内容。
-回答：专硕选房相关通知如下：
-1. 选房时间：6月16日20:00-21:00。
-2. 选房链接：https://docs.qq.com/sheet/DUkZPQ01PcGVXU1ha
-3. 规则：严禁多人帮选、先选先得、一次性安排不可更改。
-4. 提醒：选房后无法在8月迎新系统中再次选房，本次选房为硕士期间住宿安排。
-5. 名单：详见附件2专硕选房名单（共50+人）。
+用户：会议室使用规定
+背景知识：包含预约流程、使用时长限制、设备清单等多段内容。
+回答：会议室使用规定如下：
+1. 预约：提前一天在企业微信提交申请。
+2. 时长：单次最长4小时，超时需重新申请。
+3. 设备：投影仪、白板、视频会议系统可用。
+4. 注意：会后清理桌面、关闭设备。
 （注：如背景知识中某个方面的具体内容缺失，标注"未提及"并跳过该条。）
 
 【格式】：
@@ -263,7 +220,7 @@ async def chat_and_rag(request: ChatRequest):
         
         messages = [{"role": "system", "content": system_prompt}]
         
-        for user_msg, bot_msg in request.history[-3:]:
+        for user_msg, bot_msg in request.history[-10:]:
             clean_bot_msg = bot_msg.split("参考来源：")[0].strip() if bot_msg else ""
             messages.append({"role": "user", "content": user_msg})
             messages.append({"role": "assistant", "content": clean_bot_msg})
