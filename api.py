@@ -585,13 +585,13 @@ async def get_conversation(conv_id: int, token: str = ""):
         raise HTTPException(status_code=404, detail="会话不存在")
     c.execute("SELECT role, content, created_at FROM messages WHERE conversation_id=? ORDER BY id", (conv_id,))
     rows = c.fetchall()
-    conn.close()
     history = []
     for r in rows:
         history.append({"role": r[0], "content": r[1], "time": r[2]})
     # 获取会话的项目名
     c.execute("SELECT project_name FROM conversations WHERE id=?", (conv_id,))
     proj_row = c.fetchone()
+    conn.close()
     return {"history": history, "project_name": proj_row[0] if proj_row else None}
 
 @app.delete("/conversations/{conv_id}")
