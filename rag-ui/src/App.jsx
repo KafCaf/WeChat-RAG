@@ -156,16 +156,21 @@ export default function App() {
       if (forProject && data.conversations && data.conversations.length > 0) {
         const lastConv = data.conversations[0];
         setConversationId(lastConv.id);
-        const histRes = await fetch(`${API_BASE}/conversations/${lastConv.id}?token=${authToken}`);
-        const histData = await histRes.json();
-        if (histData.history && histData.history.length > 0) {
-          const msgs = [{ role: 'welcome', content: `Welcome! ${username}` }];
-          for (const h of histData.history) {
-            msgs.push({ role: h.role === 'assistant' ? 'bot' : h.role, content: h.content });
-          }
-          setMessages(msgs);
-          return;
-        }
+        // 先展示欢迎语，历史消息后台加载（避免串行等待第二请求）
+        setMessages([{ role: 'welcome', content: `Welcome! ${username}` }]);
+        fetch(`${API_BASE}/conversations/${lastConv.id}?token=${authToken}`)
+          .then(r => r.json())
+          .then(histData => {
+            if (histData.history && histData.history.length > 0) {
+              const msgs = [{ role: 'welcome', content: `Welcome! ${username}` }];
+              for (const h of histData.history) {
+                msgs.push({ role: h.role === 'assistant' ? 'bot' : h.role, content: h.content });
+              }
+              setMessages(msgs);
+              scrollToBottom();
+            }
+          });
+        return;
       }
       if (!conversationId) {
         setMessages([{ role: 'welcome', content: `Welcome! ${username}` }]);
