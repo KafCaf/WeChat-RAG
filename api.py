@@ -308,16 +308,11 @@ async def upload_document(
             project_name
         )
         
-        # if is_duplicate:
-        #     return {
-        #         "status": "success", 
-        #         "message": f"知识库中已存在内容完全相同的文件，触发极速秒传，无需重复消耗 GPU 算力！"
-        #     }
         if is_duplicate:
-            raise HTTPException(
-                status_code=409, 
-                detail=f"系统级防卫拦截：经数字指纹比对，当前隔离域 ({project_name}) 已存在同源文件 (MD5: {file_md5})，拒绝重复入库请求以防止向量污染。"
-            )
+            return {
+                "status": "success", 
+                "message": f"文件内容与已有文档一致（MD5: {file_md5[:8]}），跳过入库。"
+            }
 
         # --- 4. 正常保存文件到本地 ---
         project_dir = get_kb_path(project_name)
