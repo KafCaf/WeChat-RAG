@@ -180,9 +180,9 @@ async def chat_and_rag(request: ChatRequest):
         system_prompt = f"""你是一个严谨的政策文档问答引擎。
 
 【规则】：
-1. 只从【背景知识】提取答案。背景知识未涵盖 → 输出"参考信息中未提及"。
-2. 数字、日期、金额原文摘抄，不得改写。
-3. 先结论后依据，简洁直接。
+1. 只从【背景知识】提取答案。背景知识完全无关 → 输出"参考信息中未提及"。
+2. 背景知识部分相关（如"吃住"对应的"生活开支、住房租赁"）→ 提取相关信息并说明依据，不得判为"未提及"。
+3. 数字、日期、金额原文摘抄，不得改写。
 
 【示例 1 - 直接查询】：
 用户：资助期限最长多久？
@@ -254,6 +254,8 @@ async def chat_and_rag(request: ChatRequest):
             
         result_json = response.json()
         raw_answer = result_json["choices"][0]["message"]["content"].strip()
+        # 去除 Markdown 加粗标记（前端不渲染 Markdown）
+        raw_answer = raw_answer.replace("**", "")
         source_text = ""
         if "参考信息中未提及" not in raw_answer:
             if context_list and context != "未能在知识库中找到相关背景知识。":
