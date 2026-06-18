@@ -304,6 +304,9 @@ async def chat_and_rag(request: ChatRequest):
                 conv_id = get_or_create_conversation(username)
             conn = sqlite3.connect("database.db")
             c = conn.cursor()
+            # 同步项目名到会话
+            if request.project_name:
+                c.execute("UPDATE conversations SET project_name=? WHERE id=?", (request.project_name, conv_id))
             c.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, 'user', ?)", (conv_id, request.message))
             c.execute("INSERT INTO messages (conversation_id, role, content) VALUES (?, 'assistant', ?)", (conv_id, full_answer))
             conn.commit()
@@ -438,9 +441,15 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
             title TEXT DEFAULT '新对话',
+            project_name TEXT DEFAULT NULL,
             created_at TEXT DEFAULT (datetime('now','localtime'))
         )
     """)
+    # 兼容旧表：如果 project_name 列不存在则添加
+    try:
+        cursor.execute("ALTER TABLE conversations ADD COLUMN project_name TEXT DEFAULT NULL")
+    except:
+        pass
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -539,27 +548,31 @@ def get_or_create_conversation(username: str) -> int:
 
 class ConversationCreate(BaseModel):
     title: str = "新对话"
+    project_name: Optional[str] = None
 
 @app.get("/conversations")
-async def list_conversations(token: str = ""):
+async def list_conversations(token: str = "", project_name: str = ""):
     username = get_user_from_token(token)
     conn = sqlite3.connect("database.db")
     c = conn.cursor()
-    c.execute("SELECT id, title, created_at FROM conversations WHERE username=? ORDER BY id DESC", (username,))
+    if project_name:
+        c.execute("SELECT id, title, created_at, project_name FROM conversations WHERE username=? AND project_name=? ORDER BY id DESC", (username, project_name))
+    else:
+        c.execute("SELECT id, title, created_at, project_name FROM conversations WHERE username=? ORDER BY id DESC", (username,))
     rows = c.fetchall()
     conn.close()
-    return {"conversations": [{"id": r[0], "title": r[1], "created_at": r[2]} for r in rows]}
+    return {"conversations": [{"id": r[0], "title": r[1], "created_at": r[2], "project_name": r[3]} for r in rows]}
 
 @app.post("/conversations")
 async def create_conversation(data: ConversationCreate, token: str = ""):
     username = get_user_from_token(token)
     conn = sqlite3.connect("database.db")
     c = conn.cursor()
-    c.execute("INSERT INTO conversations (username, title) VALUES (?, ?)", (username, data.title))
+    c.execute("INSERT INTO conversations (username, title, project_name) VALUES (?, ?, ?)", (username, data.title, data.project_name))
     conn.commit()
     conv_id = c.lastrowid
     conn.close()
-    return {"status": "success", "id": conv_id}
+    return {"status": "success", "id": conv_id, "project_name": data.project_name}
 
 @app.get("/conversations/{conv_id}")
 async def get_conversation(conv_id: int, token: str = ""):
@@ -576,7 +589,10 @@ async def get_conversation(conv_id: int, token: str = ""):
     history = []
     for r in rows:
         history.append({"role": r[0], "content": r[1], "time": r[2]})
-    return {"history": history}
+    # 获取会话的项目名
+    c.execute("SELECT project_name FROM conversations WHERE id=?", (conv_id,))
+    proj_row = c.fetchone()
+    return {"history": history, "project_name": proj_row[0] if proj_row else None}
 
 @app.delete("/conversations/{conv_id}")
 async def delete_conversation(conv_id: int, token: str = ""):
