@@ -63,35 +63,21 @@ def extract_text_from_file(file_path):
                     # 提取表头
                     header_cells = [cell.text.strip().replace("\n", "") for cell in table.rows[0].cells]
                     header_count = len(header_cells)
-                    # 追踪当前章节上下文（表格行间传递）
-                    current_chapter = ''
-                    chapter_pattern = re.compile(r'第[一二三四五六七八九十百千\d]+章')
-                    article_pattern = re.compile(r'第[一二三四五六七八九十百千\d]+条')
                     for i, row in enumerate(table.rows):
                         if i == 0:
                             continue
                         row_cells = [cell.text.strip().replace("\n", " ") for cell in row.cells]
                         if not any(row_cells):
                             continue
+                        # 补齐合并单元格导致的列数不足
                         while len(row_cells) < header_count:
                             row_cells.append("")
-                        # 拼接行内容，检测章节文章归属
-                        row_text = ' '.join(row_cells)
-                        has_chapter = chapter_pattern.search(row_text)
-                        has_article = article_pattern.search(row_text)
-                        # 纯章节行（有第X章无第X条）→ 更新当前章节上下文
-                        if has_chapter and not has_article:
-                            current_chapter = has_chapter.group()
-                        # 条款行（有第X条无第X章）且有章节上下文 → 自动注入
-                        chapter_prefix = ''
-                        if has_article and not has_chapter and current_chapter:
-                            chapter_prefix = f'【{current_chapter}】'
                         parts = []
                         for idx, cell_text in enumerate(row_cells):
                             if cell_text:
                                 h = header_cells[idx] if idx < header_count else f"列{idx+1}"
                                 parts.append(f"【{h}】{cell_text}")
-                        full_text_list.append(chapter_prefix + "  ".join(parts))
+                        full_text_list.append("  ".join(parts))
 
         # ---- [格式 2]: PDF 解析 ----
         elif ext == '.pdf':
