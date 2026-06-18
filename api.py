@@ -137,7 +137,7 @@ class ChatRequest(BaseModel):
     message: str
     project_name: Optional[str] = None
     history: list = []
-    top_k: int = 5
+    top_k: int = 10
     temperature: float = 0.01
     conversation_id: Optional[int] = None
     token: Optional[str] = ""
