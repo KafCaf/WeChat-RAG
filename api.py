@@ -577,6 +577,22 @@ async def get_conversation(conv_id: int, token: str = ""):
     for r in rows:
         history.append({"role": r[0], "content": r[1], "time": r[2]})
     return {"history": history}
+
+@app.delete("/conversations/{conv_id}")
+async def delete_conversation(conv_id: int, token: str = ""):
+    username = get_user_from_token(token)
+    conn = sqlite3.connect("database.db")
+    c = conn.cursor()
+    c.execute("SELECT id FROM conversations WHERE id=? AND username=?", (conv_id, username))
+    if not c.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="会话不存在")
+    c.execute("DELETE FROM messages WHERE conversation_id=?", (conv_id,))
+    c.execute("DELETE FROM conversations WHERE id=?", (conv_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "success", "message": "会话已删除"}
+
 # 1. 挂载静态资源（CSS, JS, 图片等），让浏览器能找到网页的“衣服”
 _static_dir = "rag-ui/dist/assets"
 if os.path.isdir(_static_dir):
