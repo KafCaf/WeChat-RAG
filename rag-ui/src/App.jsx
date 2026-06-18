@@ -209,7 +209,7 @@ export default function App() {
           message: userMsg,
           history: history,
           project_name: currentProject, 
-          top_k: 5,
+          top_k: 15,
           temperature: 0.1,
           token: token,
           conversation_id: conversationId
