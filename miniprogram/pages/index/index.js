@@ -1,4 +1,5 @@
 // pages/index/index.js
+const app = getApp()
 Page({
   data: {
     inputValue: '',
@@ -25,7 +26,7 @@ Page({
   // 🌟 新增：调用后端 GET /projects 接口
   fetchProjects() {
     wx.request({
-      url: 'https://u850013-adf9-825de427.westb.seetacloud.com:8443/projects', 
+      url: app.globalData.API_BASE_URL + '/projects', 
       method: 'GET',
       success: (res) => {
         if (res.data && res.data.status === 'success') {
@@ -103,7 +104,7 @@ Page({
       : this.data.selectedProjectName;
 
     wx.uploadFile({
-      url: 'https://u850013-adf9-825de427.westb.seetacloud.com:8443/upload',
+      url: app.globalData.API_BASE_URL + '/upload',
       filePath: file.path,
       name: 'file',
       formData: {
@@ -178,7 +179,7 @@ Page({
       : this.data.selectedProjectName;
 
     wx.request({
-      url: 'https://u850013-adf9-825de427.westb.seetacloud.com:8443/chat',
+      url: app.globalData.API_BASE_URL + '/chat',
       method: 'POST',
       data: {
         message: userText,
