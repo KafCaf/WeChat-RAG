@@ -137,7 +137,7 @@ class ChatRequest(BaseModel):
     message: str
     project_name: Optional[str] = None
     history: list = []
-    top_k: int = 10
+    top_k: int = 15
     temperature: float = 0.01
     conversation_id: Optional[int] = None
     token: Optional[str] = ""
@@ -210,10 +210,12 @@ async def chat_and_rag(request: ChatRequest):
         
         messages = [{"role": "system", "content": system_prompt}]
         
-        for user_msg, bot_msg in request.history[-10:]:
+        # 只保留最近 5 轮，跳过无用的"未提及"回复
+        for user_msg, bot_msg in request.history[-5:]:
             clean_bot_msg = bot_msg.split("参考来源：")[0].strip() if bot_msg else ""
-            messages.append({"role": "user", "content": user_msg})
-            messages.append({"role": "assistant", "content": clean_bot_msg})
+            if "参考信息中未提及" not in clean_bot_msg:
+                messages.append({"role": "user", "content": user_msg})
+                messages.append({"role": "assistant", "content": clean_bot_msg})
             
         messages.append({"role": "user", "content": request.message})
         
