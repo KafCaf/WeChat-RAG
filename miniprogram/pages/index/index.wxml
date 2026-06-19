@@ -47,17 +47,18 @@
   </scroll-view>
 
   <!-- 底部操作栏 -->
-  <view class="input-bar">
+  <view class="input-bar" style="bottom: {{keyboardHeight}}px;">
     <view class="input-row">
       <input 
         class="msg-input"
         value="{{inputValue}}" 
         bindinput="handleInput" 
         bindconfirm="sendMessage"
+        bindfocus="onInputFocus"
+        bindblur="onInputBlur"
         placeholder="输入问题..."
         confirm-type="send"
-        cursor-spacing="12"
-        adjust-position="{{true}}"
+        adjust-position="{{false}}"
       />
       <view class="send-btn {{inputValue && !isLoading ? 'send-active' : ''}}" bindtap="sendMessage">
         <text class="send-icon">↑</text>

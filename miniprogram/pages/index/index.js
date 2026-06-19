@@ -12,10 +12,12 @@ Page({
     navBarHeight: 108,
     menuButtonRight: 16,
     uploadMode: null,
-    newProjectName: ''
+    newProjectName: '',
+    keyboardHeight: 0
   },
 
   onLoad() {
+    const self = this
     const sysInfo = wx.getSystemInfoSync()
     const menuBtn = wx.getMenuButtonBoundingClientRect()
     this.setData({
@@ -24,6 +26,9 @@ Page({
       menuButtonRight: sysInfo.windowWidth - menuBtn.left + 12
     })
     this.fetchProjects()
+    wx.onKeyboardHeightChange(res => {
+      self.setData({ keyboardHeight: res.height })
+    })
   },
 
   // ---- 项目列表 ----
@@ -244,6 +249,8 @@ Page({
 
   // ---- 聊天 ----
   handleInput(e) { this.setData({ inputValue: e.detail.value }) },
+  onInputFocus() {},
+  onInputBlur() {},
 
   sendMessage() {
     const text = this.data.inputValue.trim()
