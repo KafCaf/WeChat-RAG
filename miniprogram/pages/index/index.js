@@ -12,7 +12,8 @@ Page({
     navBarHeight: 108,
     menuButtonRight: 16,
     uploadMode: null,
-    newProjectName: ''
+    newProjectName: '',
+    keyboardHeight: 0
   },
 
   onLoad() {
