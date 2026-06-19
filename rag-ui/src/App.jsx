@@ -145,6 +145,15 @@ export default function App() {
     scrollToBottom();
   };
 
+  const renameConversation = async (id, newTitle) => {
+    await fetch(`${API_BASE}/conversations/${id}?token=${token}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: newTitle })
+    });
+    setConversations(prev => prev.map(c => c.id === id ? { ...c, title: newTitle } : c));
+  };
+
   const newConversation = async () => {
     const name = prompt('对话名称：', currentProject || '新对话');
     if (!name) return;

@@ -220,8 +220,29 @@ class VectorRetrieval(BaseRetrieval):
             return False
         
     def delete_file_chunks(self, index_name, filename, project_name):
-        """根据文件名和项目名删除 Elasticsearch 中的旧切片，实现覆盖式更新。
-        filename 传 "*" 时删除该项目下所有切片。"""
+            def delete_by_filename(self, index_name, filename, project_name):
+        """按文件名（支持前后缀通配）删除 ES 切片"""
+        if not self.es.indices.exists(index=index_name):
+            return
+        query_body = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {"term": {"project_name": project_name}},
+                        {"wildcard": {"filename": f"*{filename}*"}}
+                    ]
+                }
+            }
+        }
+        try:
+            response = self.es.delete_by_query(index=index_name, body=query_body, ignore=[400, 404])
+            self.es.indices.refresh(index=index_name)
+            print(f"[数据清理] 已清理项目【{project_name}】中含【{filename}】的 {response.get('deleted', 0)} 个切片。")
+        except Exception as e:
+            print(f"[数据清理] 清理失败: {e}")
+
+    def delete_file_chunks(self, index_name, filename, project_name):
+        """根据文件名和项目名删除 ES 中的旧切片。filename 传 '*' 时删除该项目下所有切片。"""
         if not self.es.indices.exists(index=index_name):
             return
             
@@ -235,6 +256,6 @@ class VectorRetrieval(BaseRetrieval):
             self.es.indices.refresh(index=index_name)
             deleted_count = response.get("deleted", 0)
             if deleted_count > 0:
-                print(f"[数据清理] 已清理项目【{project_name}】中文件【{filename}】的 {deleted_count} 个旧切片。")
+                print(f"[数据清理] 已清理项目【{project_name}】中 {deleted_count} 个旧切片。")
         except Exception as e:
             print(f"[数据清理] 清理旧数据时出错: {e}")
