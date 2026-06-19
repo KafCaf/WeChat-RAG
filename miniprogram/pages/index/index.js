@@ -180,7 +180,7 @@ Page({
       method: 'POST',
       timeout: 60000,
       header: { 'content-type': 'application/json' },
-      data: { message: userText, project_name: pName, history: [], top_k: 3, temperature: 0.4 },
+      data: { message: userText, project_name: pName, history: [], top_k: 15, temperature: 0.1 },
       success(res) {
         if (res.statusCode === 200 && res.data.answer) {
           const msgs = self.data.messages.filter(m => m.id !== loadingMsgId)
