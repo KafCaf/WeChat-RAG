@@ -1,18 +1,13 @@
 <!-- 顶部导航 -->
 <view class="nav-bar" style="padding-top: {{statusBarHeight}}px;">
-  <view class="nav-content">
-    <view class="nav-left">
-      <image class="nav-logo" src="/images/robot.jpg" mode="aspectFill"></image>
-      <text class="nav-title">智能问答</text>
-    </view>
-    <view class="nav-right">
-      <picker mode="selector" range="{{projects}}" value="{{selectedProjectIndex}}" bindchange="onProjectChange">
-        <view class="nav-project">
-          <text class="nav-project-text">{{selectedProjectName === '项目列表' ? '选择知识库' : selectedProjectName}}</text>
-          <text class="nav-arrow">▼</text>
-        </view>
-      </picker>
-    </view>
+  <view class="nav-content" style="padding-right: {{menuButtonRight}}px;">
+    <picker class="nav-picker" mode="selector" range="{{projects}}" value="{{selectedProjectIndex}}" bindchange="onProjectChange">
+      <view class="nav-project">
+        <image class="nav-logo" src="/images/robot.jpg" mode="aspectFill"></image>
+        <text class="nav-project-text">{{selectedProjectName === '项目列表' ? '选择知识库' : selectedProjectName}}</text>
+        <text class="nav-arrow">▼</text>
+      </view>
+    </picker>
   </view>
 </view>
 

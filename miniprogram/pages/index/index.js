@@ -14,14 +14,17 @@ Page({
     selectedProjectIndex: 0,
     selectedProjectName: '项目列表',
     statusBarHeight: 20,
-    navBarHeight: 108
+    navBarHeight: 108,
+    menuButtonRight: 16
   },
 
   onLoad() {
     const sysInfo = wx.getSystemInfoSync()
+    const menuBtn = wx.getMenuButtonBoundingClientRect()
     this.setData({
       statusBarHeight: sysInfo.statusBarHeight,
-      navBarHeight: sysInfo.statusBarHeight + 44
+      navBarHeight: sysInfo.statusBarHeight + 44,
+      menuButtonRight: sysInfo.windowWidth - menuBtn.left + 12
     })
     this.fetchProjects()
   },
