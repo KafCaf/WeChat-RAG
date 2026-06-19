@@ -39,6 +39,7 @@ Page({
     const self = this
     wx.request({
       url: app.globalData.API_BASE_URL + '/suggest-questions?project_name=' + encodeURIComponent(project),
+      timeout: 30000,
       success(res) {
         if (res.data && res.data.questions) {
           wx.setStorageSync(cacheKey, res.data.questions)
@@ -160,6 +161,7 @@ Page({
     wx.uploadFile({
       url: app.globalData.API_BASE_URL + '/upload',
       filePath: file.path, name: 'file',
+      timeout: 120000,
       formData: { 'project_name': projectName },
       success(res) {
         let data
@@ -210,6 +212,7 @@ Page({
     wx.request({
       url: app.globalData.API_BASE_URL + '/chat',
       method: 'POST',
+      timeout: 60000,
       header: { 'content-type': 'application/json' },
       data: { message: userText, project_name: pName, history: [], top_k: 3, temperature: 0.4 },
       success(res) {
