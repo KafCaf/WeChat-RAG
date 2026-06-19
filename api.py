@@ -151,9 +151,6 @@ async def chat_and_rag(request: ChatRequest):
             "吃住": "生活开支 住房租赁 食宿",
             "工资": "资助经费 资助额度 经费",
             "多少钱": "资助额度 经费标准 费用",
-            "相关通知": "",
-            "相关信息": "",
-            "有哪些": "",
         }
         query = request.message
         for k, v in SYNONYM_MAP.items():
