@@ -219,8 +219,7 @@ class VectorRetrieval(BaseRetrieval):
             print(f"哈希查重异常: {e}")
             return False
         
-    def delete_file_chunks(self, index_name, filename, project_name):
-            def delete_by_filename(self, index_name, filename, project_name):
+    def delete_by_filename(self, index_name, filename, project_name):
         """按文件名（支持前后缀通配）删除 ES 切片"""
         if not self.es.indices.exists(index=index_name):
             return
