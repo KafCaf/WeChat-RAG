@@ -129,7 +129,6 @@ Page({
     wx.uploadFile({
       url: app.globalData.API_BASE_URL + '/upload',
       filePath: file.path, name: 'file',
-      timeout: 120000,
       formData: { 'project_name': projectName },
       success(res) {
         let data
