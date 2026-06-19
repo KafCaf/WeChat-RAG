@@ -3,7 +3,6 @@
   <view class="nav-content" style="padding-right: {{menuButtonRight}}px;">
     <picker class="nav-picker" mode="selector" range="{{projects}}" value="{{selectedProjectIndex}}" bindchange="onProjectChange">
       <view class="nav-project">
-        <image class="nav-logo" src="/images/robot.jpg" mode="aspectFill"></image>
         <text class="nav-project-text">{{selectedProjectName === '项目列表' ? '选择知识库' : selectedProjectName}}</text>
         <text class="nav-arrow">▼</text>
       </view>
@@ -16,13 +15,10 @@
 
   <!-- 欢迎页 -->
   <view class="welcome-area" wx:if="{{messages.length <= 1}}">
-    <image class="welcome-logo" src="/images/robot.jpg" mode="aspectFit"></image>
     <text class="welcome-title">项目管理智能助手</text>
     <text class="welcome-sub">选择知识库，开始提问</text>
-    <view class="welcome-hints">
-      <view class="hint-item" bindtap="quickAsk" data-q="资助期限最长多久？">📋 资助期限最长多久？</view>
-      <view class="hint-item" bindtap="quickAsk" data-q="申请条件是什么？">📝 申请条件是什么？</view>
-      <view class="hint-item" bindtap="quickAsk" data-q="外籍专家的国籍要求">🌍 外籍专家的国籍要求</view>
+    <view class="welcome-hints" wx:if="{{suggestQuestions.length > 0}}">
+      <view class="hint-item" wx:for="{{suggestQuestions}}" wx:key="*this" bindtap="quickAsk" data-q="{{item}}">{{item}}</view>
     </view>
   </view>
 
@@ -36,31 +32,20 @@
     show-scrollbar="{{false}}"
   >
     <block wx:for="{{messages}}" wx:key="id">
-
-      <!-- 系统消息 -->
       <block wx:if="{{item.role === 'system'}}">
-        <view class="sys-msg" id="{{item.id}}">
-          <text class="sys-text">{{item.content}}</text>
-        </view>
+        <view class="sys-msg" id="{{item.id}}"><text class="sys-text">{{item.content}}</text></view>
       </block>
-
-      <!-- 用户/AI 消息 -->
       <block wx:else>
         <view class="msg-row {{item.role === 'user' ? 'msg-row-right' : ''}}" id="{{item.id}}">
           <image class="msg-avatar" src="{{item.role === 'user' ? '/images/user.jpg' : '/images/robot.jpg'}}" mode="aspectFill"></image>
           <view class="msg-body {{item.role === 'user' ? 'msg-body-user' : 'msg-body-ai'}}">
-            <!-- 加载动画 -->
             <view wx:if="{{item.isLoadingBubble}}" class="typing-dots">
-              <view class="typing-dot"></view>
-              <view class="typing-dot"></view>
-              <view class="typing-dot"></view>
+              <view class="typing-dot"></view><view class="typing-dot"></view><view class="typing-dot"></view>
             </view>
-            <!-- 正文 -->
             <text wx:else class="msg-text" user-select="true">{{item.content}}</text>
           </view>
         </view>
       </block>
-
     </block>
     <view class="list-foot" id="bottom-spacer"></view>
   </scroll-view>
@@ -83,10 +68,13 @@
       </view>
     </view>
     <view class="input-tools">
-      <view class="tool-item" bindtap="chooseAndUploadFile">
-        <text class="tool-icon">+</text>
-        <text class="tool-label">上传</text>
+      <view class="tool-item" bindtap="startUpload">
+        <text class="tool-label">上传文档</text>
       </view>
+      <view class="tool-item" wx:if="{{uploadMode === 'new'}}" bindtap="cancelNewProject">
+        <text class="tool-label">× 取消新建</text>
+      </view>
+      <input wx:if="{{uploadMode === 'new'}}" class="new-project-input" value="{{newProjectName}}" bindinput="onNewProjectInput" placeholder="输入新知识库名称" focus="{{true}}" />
     </view>
   </view>
 

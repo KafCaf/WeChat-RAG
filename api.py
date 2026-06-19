@@ -572,6 +572,44 @@ async def delete_conversation(conv_id: int, token: str = ""):
     conn.close()
     return {"status": "success", "message": "会话已删除"}
 
+# ==================== 推荐问题 ====================
+
+@app.get("/suggest-questions")
+async def suggest_questions(project_name: str):
+    """根据项目内容生成 3 个推荐问题，优先返回缓存"""
+    # 先查 ES 拿几个 chunk 样本
+    try:
+        es_q = {"query": {"term": {"project_name": project_name}}, "size": 3}
+        res = await asyncio.get_running_loop().run_in_executor(
+            None, lambda: es_client.search(index=CURRENT_INDEX, body=es_q)
+        )
+        hits = res["hits"]["hits"]
+        if not hits:
+            return {"status": "success", "questions": ["请先上传文档到该项目"]}
+        
+        samples = [h["_source"]["content"][:500] for h in hits]
+        context = "\n---\n".join(samples)
+        
+        prompt = f"根据以下文档片段，生成 3 个用户最可能问的问题。只输出问题，每行一个，不要编号，不要任何其他文字：\n\n{context}"
+        payload = {
+            "model": TARGET_MODEL,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 200,
+            "temperature": 0.7
+        }
+        headers = {"Authorization": f"Bearer {DASHSCOPE_API_KEY}", "Content-Type": "application/json"}
+        api_resp = await http_client.post(DASHSCOPE_LLM_URL, json=payload, headers=headers)
+        
+        if api_resp.status_code == 200:
+            raw = api_resp.json()["choices"][0]["message"]["content"].strip()
+            questions = [q.strip().lstrip("-0123456789. ") for q in raw.split("\n") if q.strip()][:3]
+        else:
+            questions = ["资助期限最长多久？", "申请条件是什么？", "需要什么材料？"]
+        
+        return {"status": "success", "questions": questions}
+    except Exception:
+        return {"status": "success", "questions": ["资助期限最长多久？", "申请条件是什么？", "需要什么材料？"]}
+
 # ==================== 知识库管理 ====================
 
 @app.get("/files")

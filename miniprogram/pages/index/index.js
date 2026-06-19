@@ -1,4 +1,3 @@
-// pages/index/index.js
 const app = getApp()
 Page({
   data: {
@@ -6,8 +5,7 @@ Page({
     scrollToId: '',
     isLoading: false,
     messages: [{
-      id: 'msg-0',
-      role: 'ai',
+      id: 'msg-0', role: 'ai',
       content: '你好！我是项目管理智能助手。请先选择知识库，然后开始提问吧！'
     }],
     projects: [],
@@ -15,7 +13,10 @@ Page({
     selectedProjectName: '项目列表',
     statusBarHeight: 20,
     navBarHeight: 108,
-    menuButtonRight: 16
+    menuButtonRight: 16,
+    suggestQuestions: [],
+    uploadMode: null,
+    newProjectName: ''
   },
 
   onLoad() {
@@ -29,7 +30,28 @@ Page({
     this.fetchProjects()
   },
 
-  // 快捷提问
+  // ---- 推荐问题 ----
+  fetchSuggestQuestions(project) {
+    if (!project || project === '项目列表') return
+    const cacheKey = `suggest_${project}`
+    const cached = wx.getStorageSync(cacheKey)
+    if (cached && cached.length) {
+      this.setData({ suggestQuestions: cached })
+      return
+    }
+    const self = this
+    wx.request({
+      url: app.globalData.API_BASE_URL + '/suggest-questions?project_name=' + encodeURIComponent(project),
+      success(res) {
+        if (res.data && res.data.questions) {
+          wx.setStorageSync(cacheKey, res.data.questions)
+          self.setData({ suggestQuestions: res.data.questions })
+        }
+      }
+    })
+  },
+
+  // ---- 快捷提问 ----
   quickAsk(e) {
     const q = e.currentTarget.dataset.q
     if (!q) return
@@ -37,189 +59,165 @@ Page({
     this.sendMessage()
   },
 
+  // ---- 项目列表 ----
   fetchProjects() {
     wx.request({
       url: app.globalData.API_BASE_URL + '/projects',
-      method: 'GET',
       success: (res) => {
         if (res.data && res.data.status === 'success') {
-          const realProjects = res.data.projects.filter(p => p !== '全部项目 (全局搜索)')
-          this.setData({
-            projects: realProjects,
-            selectedProjectIndex: 0,
-            selectedProjectName: '项目列表'
-          })
+          const list = res.data.projects.filter(p => p !== '全部项目 (全局搜索)')
+          this.setData({ projects: list, selectedProjectIndex: 0, selectedProjectName: '项目列表' })
         }
-      },
-      fail: (err) => { console.error("拉取项目列表失败", err) }
+      }
     })
   },
 
   onProjectChange(e) {
     const index = e.detail.value
     const name = this.data.projects[index]
-    this.setData({
-      selectedProjectIndex: index,
-      selectedProjectName: name
-    })
-    const sysMsgId = `msg-${Date.now()}`
+    this.setData({ selectedProjectIndex: index, selectedProjectName: name })
     this.setData({
       messages: [...this.data.messages, {
-        id: sysMsgId,
-        role: 'system',
-        content: `已切换至：${name}`
+        id: `msg-${Date.now()}`, role: 'system', content: `已切换至：${name}`
       }],
       scrollToId: 'bottom-spacer'
     })
+    this.fetchSuggestQuestions(name)
   },
 
-  chooseAndUploadFile() {
-    if (this.data.isUploading) return
+  // ---- 上传流程 ----
+  startUpload() {
+    const self = this
+    wx.showActionSheet({
+      itemList: ['上传到当前知识库', '上传到新建知识库'],
+      success(res) {
+        if (res.tapIndex === 0) {
+          self.setData({ uploadMode: 'existing' })
+          self.chooseFile()
+        } else {
+          self.setData({ uploadMode: 'new' })
+        }
+      }
+    })
+  },
+
+  onNewProjectInput(e) {
+    this.setData({ newProjectName: e.detail.value })
+  },
+
+  cancelNewProject() {
+    this.setData({ uploadMode: null, newProjectName: '' })
+  },
+
+  chooseFile() {
+    const self = this
     wx.chooseMessageFile({
-      count: 1,
-      type: 'file',
+      count: 1, type: 'file',
       extension: ['.pdf', '.doc', '.docx', '.txt', '.md'],
-      success: (res) => {
+      success(res) {
         const file = res.tempFiles[0]
         if (file.size > 20 * 1024 * 1024) {
           wx.showToast({ title: '文件不能超过 20MB', icon: 'none' })
           return
         }
-        this.uploadToServer(file)
-      },
-      fail: (err) => { console.log("用户取消选择文件或失败", err) }
+        self.uploadToServer(file)
+      }
     })
+  },
+
+  handleNewProjectConfirm() {
+    const name = this.data.newProjectName.trim()
+    if (!name) return
+    this.chooseFile()
   },
 
   uploadToServer(file) {
     this.setData({ isUploading: true })
     wx.showLoading({ title: '文档解析入库中...', mask: true })
 
-    const projectNameForBackend = this.data.selectedProjectName === '项目列表'
-      ? '全部项目 (全局搜索)'
-      : this.data.selectedProjectName
+    let projectName
+    if (this.data.uploadMode === 'new' && this.data.newProjectName.trim()) {
+      projectName = this.data.newProjectName.trim()
+    } else {
+      projectName = this.data.selectedProjectName === '项目列表'
+        ? '全部项目 (全局搜索)'
+        : this.data.selectedProjectName
+    }
 
+    const self = this
     wx.uploadFile({
       url: app.globalData.API_BASE_URL + '/upload',
-      filePath: file.path,
-      name: 'file',
-      formData: { 'project_name': projectNameForBackend },
-      success: (res) => {
+      filePath: file.path, name: 'file',
+      formData: { 'project_name': projectName },
+      success(res) {
         let data
         try { data = JSON.parse(res.data) } catch (e) { data = res.data }
         if (res.statusCode === 200) {
-          wx.showToast({ title: '知识库更新成功！', icon: 'success' })
-          const sysMsgId = `msg-${Date.now()}`
-          this.setData({
-            messages: [...this.data.messages, {
-              id: sysMsgId,
-              role: 'system',
-              content: `📄 文件《${file.name}》已加入知识库，可以开始提问了`
+          wx.showToast({ title: '入库成功', icon: 'success' })
+          // 清除推荐问题缓存
+          wx.removeStorageSync(`suggest_${projectName}`)
+          self.setData({
+            messages: [...self.data.messages, {
+              id: `msg-${Date.now()}`, role: 'system',
+              content: `文件《${file.name}》已加入知识库`
             }],
-            scrollToId: 'bottom-spacer'
+            scrollToId: 'bottom-spacer',
+            uploadMode: null, newProjectName: ''
           })
+          if (self.data.uploadMode === 'new') self.fetchProjects()
+          self.fetchSuggestQuestions(projectName)
         } else {
           wx.showToast({ title: data.detail || '上传失败', icon: 'none' })
         }
       },
-      fail: (err) => {
-        console.error("上传网络异常", err)
-        wx.showToast({ title: '网络连接失败', icon: 'none' })
-      },
-      complete: () => {
-        wx.hideLoading()
-        this.setData({ isUploading: false })
-      }
+      fail() { wx.showToast({ title: '网络连接失败', icon: 'none' }) },
+      complete() { wx.hideLoading(); self.setData({ isUploading: false }) }
     })
   },
 
-  handleInput(e) {
-    this.setData({ inputValue: e.detail.value })
-  },
+  // ---- 聊天 ----
+  handleInput(e) { this.setData({ inputValue: e.detail.value }) },
 
   sendMessage() {
     const text = this.data.inputValue.trim()
     if (!text || this.data.isLoading) return
-
-    const newMsgId = `msg-${Date.now()}`
-    const newUserMsg = { id: newMsgId, role: 'user', content: text }
-    const loadingMsgId = `msg-loading`
-    const loadingMsg = { id: loadingMsgId, role: 'ai', isLoadingBubble: true }
-
+    const newUser = { id: `msg-${Date.now()}`, role: 'user', content: text }
+    const loading = { id: 'msg-loading', role: 'ai', isLoadingBubble: true }
     this.setData({
-      messages: [...this.data.messages, newUserMsg, loadingMsg],
-      inputValue: '',
-      scrollToId: 'bottom-spacer',
-      isLoading: true
+      messages: [...this.data.messages, newUser, loading],
+      inputValue: '', scrollToId: 'bottom-spacer', isLoading: true
     })
-
-    this.fetchAiResponse(text, loadingMsgId)
+    this.fetchAiResponse(text, 'msg-loading')
   },
 
   fetchAiResponse(userText, loadingMsgId) {
     wx.showNavigationBarLoading()
-    const history = []
+    const pName = this.data.selectedProjectName === '项目列表'
+      ? '全部项目 (全局搜索)' : this.data.selectedProjectName
 
-    const projectNameForBackend = this.data.selectedProjectName === '项目列表'
-      ? '全部项目 (全局搜索)'
-      : this.data.selectedProjectName
-
+    const self = this
     wx.request({
       url: app.globalData.API_BASE_URL + '/chat',
       method: 'POST',
-      data: {
-        message: userText,
-        project_name: projectNameForBackend,
-        history: history,
-        top_k: 3,
-        temperature: 0.4
-      },
       header: { 'content-type': 'application/json' },
-      success: (res) => {
+      data: { message: userText, project_name: pName, history: [], top_k: 3, temperature: 0.4 },
+      success(res) {
         if (res.statusCode === 200 && res.data.answer) {
-          const aiMsgId = `msg-${Date.now()}`
-          let fullAnswer = res.data.answer
-          let mainContent = fullAnswer
-          let refContent = ''
-
-          let splitIndex = fullAnswer.indexOf('参考来源：')
-          if (splitIndex === -1) splitIndex = fullAnswer.indexOf('参考来源:')
-
-          if (splitIndex !== -1) {
-            mainContent = fullAnswer.substring(0, splitIndex).trim()
-            refContent = fullAnswer.substring(splitIndex).trim()
-          }
-
-          const newAiMsg = {
-            id: aiMsgId,
-            role: 'ai',
-            content: mainContent,
-            reference: refContent
-          }
-
-          const currentMessages = this.data.messages.filter(msg => msg.id !== loadingMsgId)
-          this.setData({
-            messages: [...currentMessages, newAiMsg],
+          const msgs = self.data.messages.filter(m => m.id !== loadingMsgId)
+          self.setData({
+            messages: [...msgs, { id: `msg-${Date.now()}`, role: 'ai', content: res.data.answer }],
             scrollToId: 'bottom-spacer'
           })
         } else {
-          this.removeLoadingBubbleAndShowError('后端处理异常', loadingMsgId)
+          self.setData({ messages: self.data.messages.filter(m => m.id !== loadingMsgId) })
+          wx.showToast({ title: '后端处理异常', icon: 'none' })
         }
       },
-      fail: (err) => {
-        console.error("请求失败", err)
-        this.removeLoadingBubbleAndShowError('网络连接失败，请检查后端', loadingMsgId)
+      fail() {
+        self.setData({ messages: self.data.messages.filter(m => m.id !== loadingMsgId) })
+        wx.showToast({ title: '网络连接失败', icon: 'none' })
       },
-      complete: () => {
-        wx.hideNavigationBarLoading()
-        this.setData({ isLoading: false })
-      }
+      complete() { wx.hideNavigationBarLoading(); self.setData({ isLoading: false }) }
     })
-  },
-
-  removeLoadingBubbleAndShowError(errorText, loadingMsgId) {
-    const currentMessages = this.data.messages.filter(msg => msg.id !== loadingMsgId)
-    wx.showToast({ title: errorText, icon: 'none' })
-    this.setData({ messages: currentMessages })
   }
 })
