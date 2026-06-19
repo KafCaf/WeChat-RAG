@@ -51,6 +51,7 @@ DASHSCOPE_EMBED_MODEL = os.getenv("DASHSCOPE_EMBED_MODEL", "text-embedding-v4")
 # 阿里云百炼 Reranker API
 DASHSCOPE_RERANK_URL = os.getenv("DASHSCOPE_RERANK_URL", "https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank")
 DASHSCOPE_RERANK_MODEL = os.getenv("DASHSCOPE_RERANK_MODEL", "qwen3-rerank")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "rag2025")
 ES_URL = os.getenv("ES_URL", "http://localhost:9200")
 CURRENT_INDEX = os.getenv("ES_INDEX", "index_user_test")
 
@@ -633,12 +634,10 @@ def list_files(project_name: str):
             raise HTTPException(status_code=500, detail=f"获取文件列表失败: {str(e)}")
 
 @app.delete("/files")
-async def delete_file(filename: str, project_name: str, token: str = ""):
-    """删除指定文档：验证用户身份后，从 ES 和磁盘中彻底清除"""
-    try:
-        username = get_user_from_token(token)
-    except HTTPException:
-        username = "admin"  # 小程序用户无 token 时允许操作
+async def delete_file(filename: str, project_name: str, token: str = "", pwd: str = ""):
+    """删除指定文档（需要管理密码）"""
+    if pwd != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="管理密码错误")
     
     # 删除磁盘文件
     file_path = os.path.join(get_kb_path(project_name), filename)
@@ -659,12 +658,10 @@ async def delete_file(filename: str, project_name: str, token: str = ""):
 
 
 @app.delete("/projects/{project_name}")
-async def delete_project(project_name: str, token: str = ""):
-    """删除整个项目及其下所有文档"""
-    try:
-        username = get_user_from_token(token)
-    except HTTPException:
-        username = "admin"
+async def delete_project(project_name: str, token: str = "", pwd: str = ""):
+    """删除整个项目（需要管理密码）"""
+    if pwd != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="管理密码错误")
     
     # 1. 删除 ES 中该项目所有 chunks
     loop = asyncio.get_running_loop()

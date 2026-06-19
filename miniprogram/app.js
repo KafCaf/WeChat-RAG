@@ -1,9 +1,11 @@
 // 小程序全局配置（备案后正式上线）
-// 备案前临时使用 HTTP + IP（备案通过后改 https://rag-ai.top）
+// 小程序全局配置（备案后正式上线）
 const API_BASE_URL = 'http://139.196.192.248:6006'
+const ADMIN_PWD = 'rag2025'
 
 App({
   globalData: {
-    API_BASE_URL
+    API_BASE_URL,
+    ADMIN_PWD
   }
 })
