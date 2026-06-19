@@ -145,6 +145,14 @@ Page({
             uploadMode: null, newProjectName: ''
           })
           self.fetchProjects()
+          if (self.data.uploadMode === 'new') {
+            // 新建项目：等列表刷新后自动选中
+            setTimeout(() => {
+              const projects = self.data.projects
+              const idx = projects.indexOf(projectName)
+              if (idx >= 0) self.setData({ selectedProjectIndex: idx, selectedProjectName: projectName })
+            }, 500)
+          }
         } else {
           wx.showToast({ title: data.detail || '上传失败', icon: 'none' })
         }
