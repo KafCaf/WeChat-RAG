@@ -144,7 +144,7 @@ Page({
             scrollToId: 'bottom-spacer',
             uploadMode: null, newProjectName: ''
           })
-          if (self.data.uploadMode === 'new') self.fetchProjects()
+          self.fetchProjects()
         } else {
           wx.showToast({ title: data.detail || '上传失败', icon: 'none' })
         }
