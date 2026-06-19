@@ -207,7 +207,7 @@ Page({
               success(mr) {
                 if (mr.confirm) {
                   wx.request({
-                    url: app.globalData.API_BASE_URL + '/files?filename=' + encodeURIComponent(file) + '&project_name=' + encodeURIComponent(pName) + '&pwd=' + app.globalData.ADMIN_PWD,
+                    url: app.globalData.API_BASE_URL + '/files?filename=' + encodeURIComponent(file) + '&project_name=' + encodeURIComponent(pName),
                     method: 'DELETE',
                     success() {
                       wx.showToast({ title: '已删除', icon: 'success' })
@@ -232,7 +232,7 @@ Page({
       success(res) {
         if (res.confirm) {
           wx.request({
-            url: app.globalData.API_BASE_URL + '/projects/' + encodeURIComponent(pName) + '?pwd=' + app.globalData.ADMIN_PWD,
+            url: app.globalData.API_BASE_URL + '/projects/' + encodeURIComponent(pName),
             method: 'DELETE',
             success() {
               wx.showToast({ title: '已删除', icon: 'success' })
