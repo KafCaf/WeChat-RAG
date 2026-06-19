@@ -4,6 +4,7 @@ import asyncio
 import traceback
 import httpx
 import hashlib
+import shutil
 from typing import Optional
 from fastapi import UploadFile, File, Form, HTTPException, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -570,6 +571,58 @@ async def delete_conversation(conv_id: int, token: str = ""):
     conn.commit()
     conn.close()
     return {"status": "success", "message": "会话已删除"}
+
+# ==================== 知识库管理 ====================
+
+@app.delete("/files")
+async def delete_file(filename: str, project_name: str, token: str = ""):
+    """删除指定文档：验证用户身份后，从 ES 和磁盘中彻底清除"""
+    username = get_user_from_token(token)
+    
+    # 删除磁盘文件
+    file_path = os.path.join(get_kb_path(project_name), filename)
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"[删除] 已删除磁盘文件: {file_path}")
+    except Exception as e:
+        print(f"[删除] 磁盘文件删除失败: {e}")
+    
+    # 删除 ES chunks
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(
+        None, retriever.delete_file_chunks, CURRENT_INDEX, str(file_path), project_name
+    )
+    
+    return {"status": "success", "message": f"文件 {filename} 已删除"}
+
+
+@app.delete("/projects/{project_name}")
+async def delete_project(project_name: str, token: str = ""):
+    """删除整个项目及其下所有文档"""
+    username = get_user_from_token(token)
+    
+    # 1. 删除 ES 中该项目所有 chunks
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(
+        None, retriever.delete_file_chunks, CURRENT_INDEX, "*", project_name
+    )
+    
+    # 2. 删除磁盘上的知识库目录
+    kb_path = get_kb_path(project_name)
+    if os.path.exists(kb_path):
+        shutil.rmtree(kb_path)
+        print(f"[删除] 已删除项目目录: {kb_path}")
+    
+    # 3. 删除 SQLite 中该项目的会话记录
+    conn = sqlite3.connect("database.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM messages WHERE conversation_id IN (SELECT id FROM conversations WHERE project_name=?)", (project_name,))
+    c.execute("DELETE FROM conversations WHERE project_name=?", (project_name,))
+    conn.commit()
+    conn.close()
+    
+    return {"status": "success", "message": f"项目 {project_name} 及其所有文档、会话已删除"}
 
 # 1. 挂载静态资源（CSS, JS, 图片等），让浏览器能找到网页的“衣服”
 _static_dir = "rag-ui/dist/assets"

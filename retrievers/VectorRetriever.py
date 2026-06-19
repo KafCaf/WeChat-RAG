@@ -220,20 +220,16 @@ class VectorRetrieval(BaseRetrieval):
             return False
         
     def delete_file_chunks(self, index_name, filename, project_name):
-        """根据文件名和项目名删除 Elasticsearch 中的旧切片，实现覆盖式更新"""
+        """根据文件名和项目名删除 Elasticsearch 中的旧切片，实现覆盖式更新。
+        filename 传 "*" 时删除该项目下所有切片。"""
         if not self.es.indices.exists(index=index_name):
             return
             
-        query_body = {
-            "query": {
-                "bool": {
-                    "must": [
-                        {"term": {"project_name": project_name}},
-                        {"match_phrase": {"filename": filename}}
-                    ]
-                }
-            }
-        }
+        must_clauses = [{"term": {"project_name": project_name}}]
+        if filename != "*":
+            must_clauses.append({"match_phrase": {"filename": filename}})
+            
+        query_body = {"query": {"bool": {"must": must_clauses}}}
         try:
             response = self.es.delete_by_query(index=index_name, body=query_body, ignore=[400, 404])
             self.es.indices.refresh(index=index_name)
