@@ -12,12 +12,10 @@ Page({
     navBarHeight: 108,
     menuButtonRight: 16,
     uploadMode: null,
-    newProjectName: '',
-    keyboardHeight: 0
+    newProjectName: ''
   },
 
   onLoad() {
-    const self = this
     const sysInfo = wx.getSystemInfoSync()
     const menuBtn = wx.getMenuButtonBoundingClientRect()
     this.setData({
@@ -25,10 +23,9 @@ Page({
       navBarHeight: sysInfo.statusBarHeight + 44,
       menuButtonRight: sysInfo.windowWidth - menuBtn.left + 12
     })
+    const self = this
+    wx.onKeyboardHeightChange(res => { self.setData({ keyboardHeight: res.height }) })
     this.fetchProjects()
-    wx.onKeyboardHeightChange(res => {
-      self.setData({ keyboardHeight: res.height })
-    })
   },
 
   // ---- 项目列表 ----

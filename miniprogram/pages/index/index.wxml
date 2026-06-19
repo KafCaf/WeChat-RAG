@@ -22,8 +22,7 @@
   <!-- 消息列表 -->
   <scroll-view 
     class="message-list {{messages.length > 0 ? '' : 'hide'}}"
-    scroll-y="true"
-    style="padding-bottom: {{keyboardHeight}}px;" 
+    scroll-y="true" 
     scroll-into-view="{{scrollToId}}"
     scroll-with-animation="true"
     enhanced="true"
@@ -48,7 +47,7 @@
   </scroll-view>
 
   <!-- 底部操作栏 -->
-  <view class="input-bar">
+  <view class="input-bar" style="bottom: {{keyboardHeight}}px;">
     <view class="input-row">
       <input 
         class="msg-input"
@@ -57,6 +56,7 @@
         bindconfirm="sendMessage"
         placeholder="输入问题..."
         confirm-type="send"
+        cursor-spacing="12"
         adjust-position="{{false}}"
       />
       <view class="send-btn {{inputValue && !isLoading ? 'send-active' : ''}}" bindtap="sendMessage">
