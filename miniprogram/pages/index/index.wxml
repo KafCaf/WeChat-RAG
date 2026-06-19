@@ -37,7 +37,6 @@
       </block>
       <block wx:else>
         <view class="msg-row {{item.role === 'user' ? 'msg-row-right' : ''}}" id="{{item.id}}">
-          <image class="msg-avatar" src="{{item.role === 'user' ? '/images/user.jpg' : '/images/robot.jpg'}}" mode="aspectFill"></image>
           <view class="msg-body {{item.role === 'user' ? 'msg-body-user' : 'msg-body-ai'}}">
             <view wx:if="{{item.isLoadingBubble}}" class="typing-dots">
               <view class="typing-dot"></view><view class="typing-dot"></view><view class="typing-dot"></view>

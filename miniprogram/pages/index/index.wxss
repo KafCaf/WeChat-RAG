@@ -1,14 +1,16 @@
 /* ========================================
-   智能问答小程序 — 现代化蓝色主题
+   智能问答小程序 — 磨砂导航 + 无头像气泡
    ======================================== */
 
-page { background: #f0f2f5; height: 100%; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+page { background: #ededed; height: 100%; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
 
-/* ---- 导航栏 ---- */
+/* ---- 导航栏（磨砂玻璃） ---- */
 .nav-bar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  box-shadow: 0 2rpx 16rpx rgba(37,99,235,0.2);
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1rpx solid rgba(0,0,0,0.06);
 }
 .nav-content {
   display: flex; align-items: center;
@@ -16,13 +18,12 @@ page { background: #f0f2f5; height: 100%; font-family: -apple-system, BlinkMacSy
 }
 .nav-picker { flex: 1; max-width: 75%; }
 .nav-project {
-  display: inline-flex; align-items: center; gap: 12rpx;
-  background: rgba(255,255,255,0.15);
+  display: inline-flex; align-items: center; gap: 10rpx;
+  background: rgba(0,0,0,0.04);
   padding: 10rpx 24rpx; border-radius: 30rpx;
 }
-.nav-logo { width: 48rpx; height: 48rpx; border-radius: 50%; border: 2rpx solid rgba(255,255,255,0.4); flex-shrink: 0; }
-.nav-project-text { font-size: 26rpx; color: #fff; max-width: 360rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nav-arrow { font-size: 18rpx; color: rgba(255,255,255,0.6); flex-shrink: 0; }
+.nav-project-text { font-size: 26rpx; color: #1e293b; max-width: 360rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.nav-arrow { font-size: 18rpx; color: #94a3b8; }
 
 /* ---- 主容器 ---- */
 .main-container { display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
@@ -32,14 +33,12 @@ page { background: #f0f2f5; height: 100%; font-family: -apple-system, BlinkMacSy
   flex: 1; display: flex; flex-direction: column; align-items: center;
   justify-content: center; padding: 60rpx 40rpx;
 }
-.welcome-logo { width: 160rpx; height: 160rpx; border-radius: 50%; margin-bottom: 40rpx; box-shadow: 0 8rpx 32rpx rgba(37,99,235,0.15); }
 .welcome-title { font-size: 40rpx; font-weight: 800; color: #1e293b; margin-bottom: 16rpx; }
 .welcome-sub { font-size: 28rpx; color: #94a3b8; margin-bottom: 48rpx; }
 .welcome-hints { width: 100%; display: flex; flex-direction: column; gap: 20rpx; }
 .hint-item {
-  background: #fff; border-radius: 20rpx; padding: 28rpx 32rpx;
+  background: #fff; border-radius: 16rpx; padding: 28rpx 32rpx;
   font-size: 28rpx; color: #475569; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
-  transition: all 0.2s;
 }
 .hint-item:active { background: #eff6ff; transform: scale(0.98); }
 
@@ -48,13 +47,15 @@ page { background: #f0f2f5; height: 100%; font-family: -apple-system, BlinkMacSy
 .message-list.hide { display: none; }
 .list-foot { height: 48rpx; }
 
-/* ---- 消息行 ---- */
-.msg-row { display: flex; align-items: flex-start; margin-bottom: 36rpx; gap: 16rpx; }
-.msg-row-right { flex-direction: row-reverse; }
-.msg-avatar { width: 68rpx; height: 68rpx; border-radius: 50%; flex-shrink: 0; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.08); }
-.msg-body { max-width: 72%; padding: 22rpx 28rpx; border-radius: 20rpx; font-size: 30rpx; line-height: 1.65; word-break: break-all; }
-.msg-body-ai { background: #fff; color: #334155; border-top-left-radius: 6rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
-.msg-body-user { background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; border-top-right-radius: 6rpx; }
+/* ---- 消息行（无头像） ---- */
+.msg-row { display: flex; margin-bottom: 28rpx; }
+.msg-row-right { justify-content: flex-end; }
+.msg-body { max-width: 78%; padding: 22rpx 28rpx; border-radius: 20rpx; font-size: 30rpx; line-height: 1.65; word-break: break-all; }
+.msg-body-ai {
+  background: #fff; color: #334155;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+}
+.msg-body-user { background: #2563eb; color: #fff; }
 .msg-text { white-space: pre-wrap; }
 
 /* ---- 加载动画 ---- */
@@ -66,38 +67,37 @@ page { background: #f0f2f5; height: 100%; font-family: -apple-system, BlinkMacSy
 @keyframes typing { 0%,80%,100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
 
 /* ---- 系统消息 ---- */
-.sys-msg { display: flex; justify-content: center; margin-bottom: 36rpx; }
+.sys-msg { display: flex; justify-content: center; margin-bottom: 28rpx; }
 .sys-text { font-size: 22rpx; color: #94a3b8; background: rgba(148,163,184,0.08); padding: 10rpx 24rpx; border-radius: 12rpx; }
 
 /* ---- 底部输入栏 ---- */
 .input-bar {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 99;
-  background: #fff; border-top: 1rpx solid #f1f5f9;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1rpx solid rgba(0,0,0,0.05);
   padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
-  box-shadow: 0 -2rpx 16rpx rgba(0,0,0,0.04);
 }
 .input-row { display: flex; align-items: center; gap: 16rpx; }
 .msg-input {
-  flex: 1; height: 76rpx; background: #f8fafc; border: 2rpx solid #e2e8f0;
+  flex: 1; height: 76rpx; background: #f1f5f9; border: none;
   border-radius: 40rpx; padding: 0 32rpx; font-size: 28rpx; color: #1e293b;
 }
-.msg-input:focus { border-color: #93c5fd; background: #fff; }
 .send-btn {
   width: 76rpx; height: 76rpx; border-radius: 50%;
   background: #e2e8f0; display: flex; align-items: center; justify-content: center;
   transition: all 0.2s;
 }
-.send-active { background: linear-gradient(135deg, #2563eb, #3b82f6); }
-.send-icon { font-size: 36rpx; color: #fff; font-weight: 700; }
+.send-active { background: #2563eb; }
+.send-icon { font-size: 36rpx; color: #94a3b8; font-weight: 700; }
 .send-active .send-icon { color: #fff; }
-.send-btn:not(.send-active) .send-icon { color: #94a3b8; }
 
 /* ---- 底部工具 ---- */
-.input-tools { display: flex; gap: 16rpx; padding-top: 16rpx; }
-.tool-item { display: flex; align-items: center; gap: 8rpx; padding: 8rpx 20rpx; border-radius: 24rpx; background: #f1f5f9; }
-.tool-item:active { background: #e2e8f0; }
-.tool-icon { font-size: 28rpx; color: #64748b; font-weight: 600; }
-.tool-label { font-size: 22rpx; color: #64748b; }
+.input-tools { display: flex; align-items: center; gap: 16rpx; padding-top: 16rpx; }
+.tool-item { padding: 10rpx 24rpx; border-radius: 24rpx; background: rgba(0,0,0,0.04); }
+.tool-item:active { background: rgba(0,0,0,0.08); }
+.tool-label { font-size: 24rpx; color: #64748b; }
 .new-project-input {
   flex: 1; height: 52rpx; background: #f8fafc; border: 1rpx solid #e2e8f0;
   border-radius: 12rpx; padding: 0 16rpx; font-size: 24rpx; color: #1e293b;
