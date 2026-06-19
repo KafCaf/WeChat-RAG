@@ -37,14 +37,14 @@ page { background: #ededed; height: 100%; font-family: -apple-system, BlinkMacSy
 .welcome-sub { font-size: 28rpx; color: #94a3b8; }
 
 /* ---- 消息列表 ---- */
-.message-list { flex: 1; padding: 20rpx 24rpx 0; }
+.message-list { flex: 1; padding: 24rpx 24rpx 0; box-sizing: border-box; }
 .message-list.hide { display: none; }
 .list-foot { height: 48rpx; }
 
 /* ---- 消息行（无头像） ---- */
-.msg-row { display: flex; margin-bottom: 28rpx; overflow: hidden; }
+.msg-row { display: flex; margin-bottom: 28rpx; width: 100%; }
 .msg-row-right { justify-content: flex-end; }
-.msg-body { max-width: 78%; padding: 22rpx 28rpx; border-radius: 20rpx; font-size: 30rpx; line-height: 1.65; word-break: break-all; }
+.msg-body { max-width: 80%; padding: 22rpx 28rpx; border-radius: 20rpx; font-size: 30rpx; line-height: 1.65; word-break: break-all; overflow-wrap: break-word; box-sizing: border-box; }
 .msg-body-ai {
   background: #fff; color: #334155;
   box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);

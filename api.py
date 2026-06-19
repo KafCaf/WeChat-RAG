@@ -328,7 +328,9 @@ async def upload_document(
             raise HTTPException(status_code=400, detail=detail)
             
         chunks["project_name"] = project_name 
-        chunks["file_hash"] = file_md5 # 🌟 将数字指纹绑定到这一批切片元数据上
+        chunks["file_hash"] = file_md5
+        # 用用户上传的原始文件名替换磁盘路径
+        chunks["filename"] = file.filename
         
         # --- 6. 热更新处理：清理旧版本切片 ---
         # 如果走到这里，说明内容不一样，但可能文件名一样（用户修改后重新上传）
@@ -611,12 +613,24 @@ async def suggest_questions(project_name: str):
 
 @app.get("/files")
 def list_files(project_name: str):
-    """获取指定项目下的文档列表"""
+    """获取指定项目下的文档列表（从 ES 读取真实文件名）"""
     try:
-        files = list_files_from_folder(project_name)
+        es_q = {
+            "query": {"term": {"project_name": project_name}},
+            "size": 0,
+            "aggs": {"files": {"terms": {"field": "filename", "size": 100}}}
+        }
+        res = es_client.search(index=CURRENT_INDEX, body=es_q)
+        buckets = res["aggregations"]["files"]["buckets"]
+        files = [b["key"] for b in buckets]
         return {"status": "success", "files": files}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取文件列表失败: {str(e)}")
+        # 回退磁盘扫描
+        try:
+            files = list_files_from_folder(project_name)
+            return {"status": "success", "files": files}
+        except:
+            raise HTTPException(status_code=500, detail=f"获取文件列表失败: {str(e)}")
 
 @app.delete("/files")
 async def delete_file(filename: str, project_name: str, token: str = ""):

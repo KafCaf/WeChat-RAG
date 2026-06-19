@@ -187,14 +187,20 @@ Page({
           wx.showToast({ title: '知识库暂无文档', icon: 'none' })
           return
         }
-        const names = res.data.files.map(f => f.split('/').pop())
+        const names = res.data.files.map(f => {
+          const raw = f.split('/').pop()
+          // 微信上传的临时文件名，用 ES 里存的真实文件名
+          return raw
+        })
         wx.showActionSheet({
-          itemList: names,
+          itemList: names.map(n => '删除: ' + n),
           success(r) {
             const file = res.data.files[r.tapIndex]
             wx.showModal({
-              title: '删除文档',
-              content: `确定删除「${file.split('/').pop()}」？此操作不可撤销。`,
+              title: '确认删除',
+              content: `将删除「${file.split('/').pop()}」`,
+              confirmText: '删除',
+              confirmColor: '#ef4444',
               success(mr) {
                 if (mr.confirm) {
                   wx.request({
