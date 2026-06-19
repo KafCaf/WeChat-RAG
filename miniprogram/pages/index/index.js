@@ -61,11 +61,14 @@ Page({
     wx.request({
       url: app.globalData.API_BASE_URL + '/projects',
       success: (res) => {
+        console.log('projects response:', res.statusCode, JSON.stringify(res.data).substring(0, 200))
         if (res.data && res.data.status === 'success') {
           const list = res.data.projects.filter(p => p !== '全部项目 (全局搜索)')
+          console.log('projects list:', list)
           this.setData({ projects: list, selectedProjectIndex: 0, selectedProjectName: '项目列表' })
         }
-      }
+      },
+      fail: (err) => { console.error('projects fail:', JSON.stringify(err)) }
     })
   },
 
@@ -89,43 +92,55 @@ Page({
       itemList: ['上传到当前知识库', '上传到新建知识库'],
       success(res) {
         if (res.tapIndex === 0) {
-          self.setData({ uploadMode: 'existing' })
           self.chooseFile()
         } else {
-          self.setData({ uploadMode: 'new' })
+          // 新建项目：先弹窗输入名称
+          wx.showModal({
+            title: '新建知识库',
+            editable: true,
+            placeholderText: '输入知识库名称',
+            success(modalRes) {
+              if (modalRes.confirm && modalRes.content) {
+                self.setData({ newProjectName: modalRes.content.trim() })
+                self._chooseFileForNew(modalRes.content.trim())
+              }
+            }
+          })
         }
       }
     })
   },
 
-  onNewProjectInput(e) {
-    this.setData({ newProjectName: e.detail.value })
-  },
-
-  cancelNewProject() {
-    this.setData({ uploadMode: null, newProjectName: '' })
-  },
-
   chooseFile() {
-    const self = this
     wx.chooseMessageFile({
       count: 1, type: 'file',
       extension: ['.pdf', '.doc', '.docx', '.txt', '.md'],
-      success(res) {
+      success: (res) => {
         const file = res.tempFiles[0]
         if (file.size > 20 * 1024 * 1024) {
           wx.showToast({ title: '文件不能超过 20MB', icon: 'none' })
           return
         }
-        self.uploadToServer(file)
+        this.setData({ uploadMode: 'existing' })
+        this.uploadToServer(file)
       }
     })
   },
 
-  handleNewProjectConfirm() {
-    const name = this.data.newProjectName.trim()
-    if (!name) return
-    this.chooseFile()
+  _chooseFileForNew(projectName) {
+    wx.chooseMessageFile({
+      count: 1, type: 'file',
+      extension: ['.pdf', '.doc', '.docx', '.txt', '.md'],
+      success: (res) => {
+        const file = res.tempFiles[0]
+        if (file.size > 20 * 1024 * 1024) {
+          wx.showToast({ title: '文件不能超过 20MB', icon: 'none' })
+          return
+        }
+        this.setData({ uploadMode: 'new' })
+        this.uploadToServer(file)
+      }
+    })
   },
 
   uploadToServer(file) {
@@ -133,8 +148,8 @@ Page({
     wx.showLoading({ title: '文档解析入库中...', mask: true })
 
     let projectName
-    if (this.data.uploadMode === 'new' && this.data.newProjectName.trim()) {
-      projectName = this.data.newProjectName.trim()
+    if (this.data.uploadMode === 'new' && this.data.newProjectName) {
+      projectName = this.data.newProjectName
     } else {
       projectName = this.data.selectedProjectName === '项目列表'
         ? '全部项目 (全局搜索)'
@@ -151,7 +166,6 @@ Page({
         try { data = JSON.parse(res.data) } catch (e) { data = res.data }
         if (res.statusCode === 200) {
           wx.showToast({ title: '入库成功', icon: 'success' })
-          // 清除推荐问题缓存
           wx.removeStorageSync(`suggest_${projectName}`)
           self.setData({
             messages: [...self.data.messages, {
@@ -168,7 +182,7 @@ Page({
         }
       },
       fail() { wx.showToast({ title: '网络连接失败', icon: 'none' }) },
-      complete() { wx.hideLoading(); self.setData({ isUploading: false }) }
+      complete() { wx.hideLoading(); self.setData({ isUploading: false, uploadMode: null, newProjectName: '' }) }
     })
   },
 

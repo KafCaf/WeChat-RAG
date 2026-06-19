@@ -70,10 +70,6 @@
       <view class="tool-item" bindtap="startUpload">
         <text class="tool-label">上传文档</text>
       </view>
-      <view class="tool-item" wx:if="{{uploadMode === 'new'}}" bindtap="cancelNewProject">
-        <text class="tool-label">× 取消新建</text>
-      </view>
-      <input wx:if="{{uploadMode === 'new'}}" class="new-project-input" value="{{newProjectName}}" bindinput="onNewProjectInput" placeholder="输入新知识库名称" focus="{{true}}" />
     </view>
   </view>
 
