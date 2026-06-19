@@ -17,9 +17,6 @@
   <view class="welcome-area" wx:if="{{messages.length === 0}}">
     <text class="welcome-title">项目管理智能助手</text>
     <text class="welcome-sub">选择知识库，开始提问</text>
-    <view class="welcome-hints" wx:if="{{suggestQuestions.length > 0}}">
-      <view class="hint-item" wx:for="{{suggestQuestions}}" wx:key="*this" bindtap="quickAsk" data-q="{{item}}">{{item}}</view>
-    </view>
   </view>
 
   <!-- 消息列表 -->

@@ -11,7 +11,6 @@ Page({
     statusBarHeight: 20,
     navBarHeight: 108,
     menuButtonRight: 16,
-    suggestQuestions: [],
     uploadMode: null,
     newProjectName: ''
   },
@@ -25,36 +24,6 @@ Page({
       menuButtonRight: sysInfo.windowWidth - menuBtn.left + 12
     })
     this.fetchProjects()
-  },
-
-  // ---- 推荐问题 ----
-  fetchSuggestQuestions(project) {
-    if (!project || project === '项目列表') return
-    const cacheKey = `suggest_${project}`
-    const cached = wx.getStorageSync(cacheKey)
-    if (cached && cached.length) {
-      this.setData({ suggestQuestions: cached })
-      return
-    }
-    const self = this
-    wx.request({
-      url: app.globalData.API_BASE_URL + '/suggest-questions?project_name=' + encodeURIComponent(project),
-      timeout: 30000,
-      success(res) {
-        if (res.data && res.data.questions) {
-          wx.setStorageSync(cacheKey, res.data.questions)
-          self.setData({ suggestQuestions: res.data.questions })
-        }
-      }
-    })
-  },
-
-  // ---- 快捷提问 ----
-  quickAsk(e) {
-    const q = e.currentTarget.dataset.q
-    if (!q) return
-    this.setData({ inputValue: q })
-    this.sendMessage()
   },
 
   // ---- 项目列表 ----
@@ -83,7 +52,6 @@ Page({
       }],
       scrollToId: 'bottom-spacer'
     })
-    this.fetchSuggestQuestions(name)
   },
 
   // ---- 上传流程 ----
@@ -178,7 +146,6 @@ Page({
             uploadMode: null, newProjectName: ''
           })
           if (self.data.uploadMode === 'new') self.fetchProjects()
-          self.fetchSuggestQuestions(projectName)
         } else {
           wx.showToast({ title: data.detail || '上传失败', icon: 'none' })
         }
