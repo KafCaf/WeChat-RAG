@@ -1,72 +1,98 @@
-<view class="chat-container">
+<!-- 顶部导航 -->
+<view class="nav-bar" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-content">
+    <view class="nav-left">
+      <image class="nav-logo" src="/images/robot.jpg" mode="aspectFill"></image>
+      <text class="nav-title">智能问答</text>
+    </view>
+    <view class="nav-right">
+      <picker mode="selector" range="{{projects}}" value="{{selectedProjectIndex}}" bindchange="onProjectChange">
+        <view class="nav-project">
+          <text class="nav-project-text">{{selectedProjectName === '项目列表' ? '选择知识库' : selectedProjectName}}</text>
+          <text class="nav-arrow">▼</text>
+        </view>
+      </picker>
+    </view>
+  </view>
+</view>
+
+<!-- 主容器 -->
+<view class="main-container" style="padding-top: {{navBarHeight}}px;">
+
+  <!-- 欢迎页 -->
+  <view class="welcome-area" wx:if="{{messages.length <= 1}}">
+    <image class="welcome-logo" src="/images/robot.jpg" mode="aspectFit"></image>
+    <text class="welcome-title">项目管理智能助手</text>
+    <text class="welcome-sub">选择知识库，开始提问</text>
+    <view class="welcome-hints">
+      <view class="hint-item" bindtap="quickAsk" data-q="资助期限最长多久？">📋 资助期限最长多久？</view>
+      <view class="hint-item" bindtap="quickAsk" data-q="申请条件是什么？">📝 申请条件是什么？</view>
+      <view class="hint-item" bindtap="quickAsk" data-q="外籍专家的国籍要求">🌍 外籍专家的国籍要求</view>
+    </view>
+  </view>
+
+  <!-- 消息列表 -->
   <scroll-view 
-    class="message-list" 
+    class="message-list {{messages.length > 1 ? '' : 'hide'}}"
     scroll-y="true" 
     scroll-into-view="{{scrollToId}}"
     scroll-with-animation="true"
+    enhanced="true"
+    show-scrollbar="{{false}}"
   >
-  <block wx:for="{{messages}}" wx:key="id">
-      
+    <block wx:for="{{messages}}" wx:key="id">
+
+      <!-- 系统消息 -->
       <block wx:if="{{item.role === 'system'}}">
-        <view class="system-msg" id="{{item.id}}">
-          <text class="system-text">{{item.content}}</text>
+        <view class="sys-msg" id="{{item.id}}">
+          <text class="sys-text">{{item.content}}</text>
         </view>
       </block>
 
+      <!-- 用户/AI 消息 -->
       <block wx:else>
-        <view class="message-item {{item.role === 'user' ? 'message-right' : 'message-left'}}" id="{{item.id}}">
-          <image class="avatar {{item.role === 'user' ? 'user-avatar-margin' : 'bot-avatar-margin'}}" src="{{item.role === 'user' ? '/images/user.jpg' : '/images/robot.jpg'}}" mode="aspectFill"></image>
-          
-          <view class="message-bubble">
-          <block wx:if="{{item.isLoadingBubble}}">
-            <view class="loading-dots">
-              <text class="dot">.</text><text class="dot">.</text><text class="dot">.</text>
+        <view class="msg-row {{item.role === 'user' ? 'msg-row-right' : ''}}" id="{{item.id}}">
+          <image class="msg-avatar" src="{{item.role === 'user' ? '/images/user.jpg' : '/images/robot.jpg'}}" mode="aspectFill"></image>
+          <view class="msg-body {{item.role === 'user' ? 'msg-body-user' : 'msg-body-ai'}}">
+            <!-- 加载动画 -->
+            <view wx:if="{{item.isLoadingBubble}}" class="typing-dots">
+              <view class="typing-dot"></view>
+              <view class="typing-dot"></view>
+              <view class="typing-dot"></view>
             </view>
-          </block>
-          <block wx:else>
-            <text class="message-text" user-select="true">{{item.content}}</text>
-            
-            <block wx:if="{{item.reference}}">
-              <view class="reference-divider"></view>
-              <text class="reference-text" user-select="true">{{item.reference}}</text>
-            </block>
-          </block>
-        </view>
+            <!-- 正文 -->
+            <text wx:else class="msg-text" user-select="true">{{item.content}}</text>
+          </view>
         </view>
       </block>
 
     </block>
-    <view class="bottom-spacer" id="bottom-spacer"></view>
+    <view class="list-foot" id="bottom-spacer"></view>
   </scroll-view>
 
-  <view class="bottom-bar">
-    
-    <view class="toolbar">
-      <picker class="project-picker-wrap" mode="selector" range="{{projects}}" value="{{selectedProjectIndex}}" bindchange="onProjectChange">
-        <view class="project-selector">
-          <text class="selector-icon">📂</text>
-          <text class="selector-text">{{selectedProjectName}}</text>
-          <text class="selector-arrow">▼</text>
-        </view>
-      </picker>
-
-      <view class="upload-btn" bindtap="chooseAndUploadFile" hover-class="upload-btn-hover">
-        <text class="upload-icon">📤</text>
-        <text>上传知识</text>
-      </view>
-    </view>
-
-    <view class="input-area">
+  <!-- 底部操作栏 -->
+  <view class="input-bar">
+    <view class="input-row">
       <input 
-        class="message-input" 
+        class="msg-input"
         value="{{inputValue}}" 
         bindinput="handleInput" 
         bindconfirm="sendMessage"
-        placeholder="问点关于这个项目的问题..." 
-        cursor-spacing="20"
+        placeholder="输入问题..."
         confirm-type="send"
+        cursor-spacing="12"
+        adjust-position="{{false}}"
       />
-      <button class="send-btn" bindtap="sendMessage" disabled="{{!inputValue || isLoading}}">发送</button>
+      <view class="send-btn {{inputValue && !isLoading ? 'send-active' : ''}}" bindtap="sendMessage">
+        <text class="send-icon">↑</text>
+      </view>
     </view>
-  </view> </view> ```
+    <view class="input-tools">
+      <view class="tool-item" bindtap="chooseAndUploadFile">
+        <text class="tool-icon">+</text>
+        <text class="tool-label">上传</text>
+      </view>
+    </view>
+  </view>
 
+</view>

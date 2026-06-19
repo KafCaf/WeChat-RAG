@@ -1,288 +1,102 @@
-/* =======================================
-   1. 全局与页面基础设置
-   ======================================= */
-   page {
-    background-color: #ededed; 
-    height: 100%;
-  }
-  
-  .chat-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden; /* 🌟 新增：锁死最外层容器，绝对不允许整个页面跟着滚动 */
-  }
-  
-  /* =======================================
-     2. 消息列表区 (含刘海屏适配)
-     ======================================= */
-  /* =======================================
-   2. 消息列表区 (含刘海屏适配)
-   ======================================= */
-.message-list {
-  flex: 1;
-  height: 0; 
-  /* 🌟 核心修复：把原来的 150rpx 改大，增加到 280rpx 或 300rpx */
-  padding: calc(env(safe-area-inset-top) + 40rpx) 24rpx 280rpx 24rpx;
-  box-sizing: border-box;
-}
+/* ========================================
+   智能问答小程序 — 现代化蓝色主题
+   ======================================== */
 
-.bottom-spacer {
-  /* 🌟 可选修复：顺便把占位垫片也稍微加高一点点，让最后一条消息离底栏有点呼吸感 */
-  height: 40rpx; 
-}
-  
-  /* =======================================
-     3. 单条消息布局
-     ======================================= */
-  .message-item {
-    display: flex;
-    margin-bottom: 40rpx;
-    align-items: flex-start; /* 头像和气泡顶部对齐 */
-  }
-  
-  .message-left {
-    flex-direction: row; /* 机器人在左 */
-  }
-  
-  .message-right {
-    flex-direction: row-reverse; /* 用户在右 */
-  }
-  
-  /* =======================================
-     4. 头像样式
-     ======================================= */
-  .avatar {
-    width: 80rpx;
-    height: 80rpx;
-    border-radius: 50%;
-    flex-shrink: 0; /* 防止头像被挤压 */
-    background-color: #fff;
-  }
-  
-  .bot-avatar-margin {
-    margin-right: 20rpx;
-  }
-  
-  .user-avatar-margin {
-    margin-left: 20rpx;
-  }
-  
-  /* =======================================
-     5. 聊天气泡样式
-     ======================================= */
-  .message-bubble {
-    max-width: 65%; /* 限制气泡最大宽度，防止太长 */
-    padding: 20rpx 28rpx;
-    border-radius: 16rpx;
-    font-size: 30rpx;
-    line-height: 1.6;
-    word-break: break-all; /* 允许长单词换行 */
-  }
-  
-  /* 机器人的气泡：白底黑字，左上角变直角 */
-  .message-left .message-bubble {
-    background-color: #ffffff;
-    color: #333333;
-    border-top-left-radius: 4rpx;
-  }
-  
-  /* 用户的气泡：绿底黑字，右上角变直角 */
-  .message-right .message-bubble {
-    background-color: #95ec69; /* 微信经典绿 */
-    color: #000000;
-    border-top-right-radius: 4rpx;
-  }
-  
-  .message-text {
-    white-space: pre-wrap; /* 完美保留大模型返回的换行符 */
-  }
-  
-  /* =======================================
-     /* =======================================
-   6. 🌟 修改后：底部固定操作区 (选择器 + 上传按钮 + 输入框)
-   ======================================= */
-.bottom-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background-color: #f7f7f7;
-  border-top: 1rpx solid #e5e5e5;
-  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
-  z-index: 99;
-  display: flex;
-  flex-direction: column;
-}
+page { background: #f0f2f5; height: 100%; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
 
-/* 🌟 新增：包裹选择器和上传按钮的工具栏 */
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* 左右两端对齐 */
-  padding: 20rpx 24rpx 0 24rpx;
+/* ---- 导航栏 ---- */
+.nav-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 2rpx 16rpx rgba(37,99,235,0.2);
 }
-
-.project-picker-wrap {
-  flex: 1; /* 占据剩余空间 */
-  overflow: hidden;
+.nav-content {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 88rpx; padding: 0 28rpx;
 }
-
-/* 项目选择器样式 */
-.project-selector {
-  display: inline-flex;
-  align-items: center;
-  background-color: #ffffff;
-  padding: 8rpx 24rpx;
-  border-radius: 30rpx;
-  font-size: 26rpx;
-  color: #555;
-  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
+.nav-left { display: flex; align-items: center; gap: 16rpx; }
+.nav-logo { width: 56rpx; height: 56rpx; border-radius: 50%; border: 3rpx solid rgba(255,255,255,0.4); }
+.nav-title { font-size: 34rpx; font-weight: 700; color: #fff; }
+.nav-right { flex-shrink: 0; }
+.nav-project {
+  display: flex; align-items: center; gap: 10rpx;
+  background: rgba(255,255,255,0.15);
+  padding: 10rpx 22rpx; border-radius: 30rpx;
 }
+.nav-project-text { font-size: 24rpx; color: rgba(255,255,255,0.9); max-width: 260rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-arrow { font-size: 18rpx; color: rgba(255,255,255,0.6); }
 
-.selector-icon {
-  margin-right: 10rpx;
+/* ---- 主容器 ---- */
+.main-container { display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
+
+/* ---- 欢迎页 ---- */
+.welcome-area {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 60rpx 40rpx;
 }
-
-.selector-text {
-  max-width: 300rpx;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.welcome-logo { width: 160rpx; height: 160rpx; border-radius: 50%; margin-bottom: 40rpx; box-shadow: 0 8rpx 32rpx rgba(37,99,235,0.15); }
+.welcome-title { font-size: 40rpx; font-weight: 800; color: #1e293b; margin-bottom: 16rpx; }
+.welcome-sub { font-size: 28rpx; color: #94a3b8; margin-bottom: 48rpx; }
+.welcome-hints { width: 100%; display: flex; flex-direction: column; gap: 20rpx; }
+.hint-item {
+  background: #fff; border-radius: 20rpx; padding: 28rpx 32rpx;
+  font-size: 28rpx; color: #475569; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
+  transition: all 0.2s;
 }
+.hint-item:active { background: #eff6ff; transform: scale(0.98); }
 
-.selector-arrow {
-  margin-left: 10rpx;
-  font-size: 20rpx;
-  color: #999;
+/* ---- 消息列表 ---- */
+.message-list { flex: 1; padding: 20rpx 24rpx 0; }
+.message-list.hide { display: none; }
+.list-foot { height: 48rpx; }
+
+/* ---- 消息行 ---- */
+.msg-row { display: flex; align-items: flex-start; margin-bottom: 36rpx; gap: 16rpx; }
+.msg-row-right { flex-direction: row-reverse; }
+.msg-avatar { width: 68rpx; height: 68rpx; border-radius: 50%; flex-shrink: 0; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.08); }
+.msg-body { max-width: 72%; padding: 22rpx 28rpx; border-radius: 20rpx; font-size: 30rpx; line-height: 1.65; word-break: break-all; }
+.msg-body-ai { background: #fff; color: #334155; border-top-left-radius: 6rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
+.msg-body-user { background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; border-top-right-radius: 6rpx; }
+.msg-text { white-space: pre-wrap; }
+
+/* ---- 加载动画 ---- */
+.typing-dots { display: flex; align-items: center; gap: 8rpx; padding: 8rpx 0; }
+.typing-dot { width: 14rpx; height: 14rpx; background: #cbd5e1; border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; }
+.typing-dot:nth-child(1) { animation-delay: 0s; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing { 0%,80%,100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
+/* ---- 系统消息 ---- */
+.sys-msg { display: flex; justify-content: center; margin-bottom: 36rpx; }
+.sys-text { font-size: 22rpx; color: #94a3b8; background: rgba(148,163,184,0.08); padding: 10rpx 24rpx; border-radius: 12rpx; }
+
+/* ---- 底部输入栏 ---- */
+.input-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 99;
+  background: #fff; border-top: 1rpx solid #f1f5f9;
+  padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
+  box-shadow: 0 -2rpx 16rpx rgba(0,0,0,0.04);
 }
-
-/* 🌟 新增：上传按钮样式 */
-.upload-btn {
-  display: inline-flex;
-  align-items: center;
-  background-color: #ffffff;
-  padding: 8rpx 24rpx;
-  border-radius: 30rpx;
-  font-size: 26rpx;
-  color: #1989fa;
-  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
-  margin-left: 15rpx;
+.input-row { display: flex; align-items: center; gap: 16rpx; }
+.msg-input {
+  flex: 1; height: 76rpx; background: #f8fafc; border: 2rpx solid #e2e8f0;
+  border-radius: 40rpx; padding: 0 32rpx; font-size: 28rpx; color: #1e293b;
 }
-
-.upload-btn-hover {
-  background-color: #eef5ff;
-}
-
-.upload-icon {
-  margin-right: 8rpx;
-  font-size: 28rpx;
-}
-
-/* 输入框区域样式调整 */
-.input-area {
-  display: flex;
-  align-items: center;
-  box-sizing: border-box;
-  padding: 20rpx 24rpx;
-  width: 100%;
-}
-
-.message-input {
-  flex: 1;
-  height: 76rpx;
-  background-color: #ffffff;
-  border-radius: 38rpx;
-  padding: 0 32rpx;
-  font-size: 30rpx;
-  margin-right: 20rpx;
-}
-
+.msg-input:focus { border-color: #93c5fd; background: #fff; }
 .send-btn {
-  width: 140rpx !important;
-  height: 76rpx;
-  line-height: 76rpx;
-  background-color: #07c160;
-  color: #ffffff;
-  font-size: 28rpx;
-  font-weight: 500;
-  border-radius: 38rpx;
-  padding: 0;
-  margin: 0;
+  width: 76rpx; height: 76rpx; border-radius: 50%;
+  background: #e2e8f0; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
 }
+.send-active { background: linear-gradient(135deg, #2563eb, #3b82f6); }
+.send-icon { font-size: 36rpx; color: #fff; font-weight: 700; }
+.send-active .send-icon { color: #fff; }
+.send-btn:not(.send-active) .send-icon { color: #94a3b8; }
 
-.send-btn[disabled]:not([type]) {
-  background-color: #e2e2e2 !important;
-  color: #999999 !important;
-}
-  /* =======================================
-     7. 🌟 聊天气泡加载动画 (跳动的三个点)
-     ======================================= */
-  .loading-dots {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 48rpx; 
-    padding: 0 10rpx;
-  }
-  
-  .dot {
-    font-size: 40rpx;
-    line-height: 40rpx;
-    color: #888;
-    margin: 0 6rpx;
-    animation: jump 1.4s infinite ease-in-out both;
-  }
-  
-  .dot:nth-child(1) {
-    animation-delay: -0.32s;
-  }
-  .dot:nth-child(2) {
-    animation-delay: -0.16s;
-  }
-  
-  @keyframes jump {
-    0%, 80%, 100% { 
-      transform: translateY(0);
-    }
-    40% { 
-      transform: translateY(-12rpx);
-    }
-  }
-  /* =======================================
-   8. 🌟 系统提示消息样式
-   ======================================= */
-.system-msg {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 40rpx; /* 和普通消息保持一样的间距 */
-  padding: 0 40rpx;
-}
-
-.system-text {
-  font-size: 24rpx; /* 字体比聊天气泡小一点 */
-  color: #999999; /* 低调的高级灰 */
-  background-color: rgba(0, 0, 0, 0.05); /* 给一点点半透明的灰色底色 */
-  padding: 8rpx 20rpx;
-  border-radius: 12rpx; /* 小圆角 */
-  text-align: center;
-  line-height: 1.4;
-}
-/* =======================================
-   9. 🌟 参考来源排版样式
-   ======================================= */
-   .reference-divider {
-    height: 1rpx;
-    /* 使用极浅的灰色虚线，显得精致 */
-    border-top: 1rpx dashed rgba(0, 0, 0, 0.1); 
-    margin: 16rpx 0; /* 上下留白 */
-  }
-  
-  .reference-text {
-    font-size: 24rpx; /* 字体比正文小 */
-    color: #888888;   /* 颜色变灰 */
-    line-height: 1.5;
-    white-space: pre-wrap; 
-    word-break: break-all;
-    display: block; /* 保证它独占一块区域 */
-  }
+/* ---- 底部工具 ---- */
+.input-tools { display: flex; gap: 16rpx; padding-top: 16rpx; }
+.tool-item { display: flex; align-items: center; gap: 8rpx; padding: 8rpx 20rpx; border-radius: 24rpx; background: #f1f5f9; }
+.tool-item:active { background: #e2e8f0; }
+.tool-icon { font-size: 28rpx; color: #64748b; font-weight: 600; }
+.tool-label { font-size: 22rpx; color: #64748b; }
