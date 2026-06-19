@@ -574,6 +574,15 @@ async def delete_conversation(conv_id: int, token: str = ""):
 
 # ==================== 知识库管理 ====================
 
+@app.get("/files")
+def list_files(project_name: str):
+    """获取指定项目下的文档列表"""
+    try:
+        files = list_files_from_folder(project_name)
+        return {"status": "success", "files": files}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取文件列表失败: {str(e)}")
+
 @app.delete("/files")
 async def delete_file(filename: str, project_name: str, token: str = ""):
     """删除指定文档：验证用户身份后，从 ES 和磁盘中彻底清除"""

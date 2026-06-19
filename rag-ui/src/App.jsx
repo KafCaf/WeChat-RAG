@@ -23,6 +23,7 @@ export default function App() {
 
   const [projects, setProjects] = useState([]);
   const [currentProject, setCurrentProject] = useState("");
+  const [files, setFiles] = useState([]);  // 当前项目文档列表
   const [isUploading, setIsUploading] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [useNewProject, setUseNewProject] = useState(false);
@@ -38,11 +39,34 @@ export default function App() {
 
   useEffect(() => {
     if (token && currentProject) {
+      fetchFiles(currentProject);
       loadConversationHistory(token, currentProject);
     } else if (token) {
       loadConversationHistory(token);
     }
   }, [currentProject, token]);
+
+  const fetchFiles = async (project) => {
+    try {
+      const res = await fetch(`${API_BASE}/files?project_name=${encodeURIComponent(project)}`);
+      const data = await res.json();
+      if (data.status === "success") setFiles(data.files || []);
+    } catch (_) { setFiles([]); }
+  };
+
+  const deleteFile = async (filename) => {
+    if (!confirm(`确定删除文档「${filename.split('/').pop()}」？此操作不可撤销。`)) return;
+    await fetch(`${API_BASE}/files?filename=${encodeURIComponent(filename)}&project_name=${encodeURIComponent(currentProject)}&token=${token}`, { method: 'DELETE' });
+    fetchFiles(currentProject);
+  };
+
+  const deleteProject = async () => {
+    if (!confirm(`确定删除整个项目「${currentProject}」？将清空所有文档和会话。`)) return;
+    await fetch(`${API_BASE}/projects/${encodeURIComponent(currentProject)}?token=${token}`, { method: 'DELETE' });
+    setCurrentProject("");
+    fetchProjects();
+    setFiles([]);
+  };
 
   const fetchProjects = async () => {
     try {
@@ -325,8 +349,11 @@ export default function App() {
         <div className="flex-1 p-6 space-y-8 overflow-y-auto">
           {/* 知识库列表 */}
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase mb-4 tracking-widest">
-              <FolderGit2 size={14} /> 知识库列表
+            <div className="flex items-center justify-between gap-2 text-xs font-bold text-slate-500 uppercase mb-4 tracking-widest">
+              <div className="flex items-center gap-2"><FolderGit2 size={14} /> 知识库列表</div>
+              {currentProject && (
+                <button onClick={deleteProject} className="text-red-400 hover:text-red-300 text-[10px]" title="删除项目">删除</button>
+              )}
             </div>
             <select 
               value={currentProject} 
@@ -340,6 +367,23 @@ export default function App() {
               )}
             </select>
           </div>
+
+          {/* 项目文档 */}
+          {currentProject && files.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase mb-4 tracking-widest">
+              📄 项目文档
+            </div>
+            <div className="max-h-32 overflow-y-auto space-y-1">
+              {files.map((f, i) => (
+                <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-slate-800 group">
+                  <span className="truncate flex-1">{f.split('/').pop()}</span>
+                  <button onClick={() => deleteFile(f)} className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-[10px]" title="删除文档">&times;</button>
+                </div>
+              ))}
+            </div>
+          </div>
+          )}
 
           <div className="border-t border-slate-800 pt-8">
 {/* 会话列表 */}
