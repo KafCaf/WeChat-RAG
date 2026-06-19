@@ -249,8 +249,6 @@ Page({
 
   // ---- 聊天 ----
   handleInput(e) { this.setData({ inputValue: e.detail.value }) },
-  onInputFocus() {},
-  onInputBlur() {},
 
   sendMessage() {
     const text = this.data.inputValue.trim()
