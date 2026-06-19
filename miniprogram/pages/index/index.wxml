@@ -67,6 +67,9 @@
       <view class="tool-item" bindtap="startUpload">
         <text class="tool-label">上传文档</text>
       </view>
+      <view class="tool-item" bindtap="showManageOptions" wx:if="{{selectedProjectName !== '项目列表'}}">
+        <text class="tool-label">管理</text>
+      </view>
     </view>
   </view>
 

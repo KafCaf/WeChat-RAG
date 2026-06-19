@@ -162,6 +162,80 @@ Page({
     })
   },
 
+  // ---- 管理 ----
+  showManageOptions() {
+    const self = this
+    wx.showActionSheet({
+      itemList: ['查看文档列表', '删除当前知识库'],
+      success(res) {
+        if (res.tapIndex === 0) {
+          self.showFileList()
+        } else {
+          self.confirmDeleteProject()
+        }
+      }
+    })
+  },
+
+  showFileList() {
+    const self = this
+    const pName = this.data.selectedProjectName
+    wx.request({
+      url: app.globalData.API_BASE_URL + '/files?project_name=' + encodeURIComponent(pName),
+      success(res) {
+        if (!res.data || !res.data.files || res.data.files.length === 0) {
+          wx.showToast({ title: '知识库暂无文档', icon: 'none' })
+          return
+        }
+        const names = res.data.files.map(f => f.split('/').pop())
+        wx.showActionSheet({
+          itemList: names,
+          success(r) {
+            const file = res.data.files[r.tapIndex]
+            wx.showModal({
+              title: '删除文档',
+              content: `确定删除「${file.split('/').pop()}」？此操作不可撤销。`,
+              success(mr) {
+                if (mr.confirm) {
+                  wx.request({
+                    url: app.globalData.API_BASE_URL + '/files?filename=' + encodeURIComponent(file) + '&project_name=' + encodeURIComponent(pName),
+                    method: 'DELETE',
+                    success() {
+                      wx.showToast({ title: '已删除', icon: 'success' })
+                      self.setData({ messages: [...self.data.messages, { id: `msg-${Date.now()}`, role: 'system', content: `文档已删除` }], scrollToId: 'bottom-spacer' })
+                    }
+                  })
+                }
+              }
+            })
+          }
+        })
+      }
+    })
+  },
+
+  confirmDeleteProject() {
+    const pName = this.data.selectedProjectName
+    const self = this
+    wx.showModal({
+      title: '删除知识库',
+      content: `确定删除「${pName}」及其所有文档？此操作不可撤销。`,
+      success(res) {
+        if (res.confirm) {
+          wx.request({
+            url: app.globalData.API_BASE_URL + '/projects/' + encodeURIComponent(pName),
+            method: 'DELETE',
+            success() {
+              wx.showToast({ title: '已删除', icon: 'success' })
+              self.setData({ selectedProjectIndex: 0, selectedProjectName: '项目列表', messages: [] })
+              self.fetchProjects()
+            }
+          })
+        }
+      }
+    })
+  },
+
   // ---- 聊天 ----
   handleInput(e) { this.setData({ inputValue: e.detail.value }) },
 
