@@ -57,7 +57,7 @@
         placeholder="输入问题..."
         confirm-type="send"
         cursor-spacing="12"
-        adjust-position="{{false}}"
+        adjust-position="{{true}}"
       />
       <view class="send-btn {{inputValue && !isLoading ? 'send-active' : ''}}" bindtap="sendMessage">
         <text class="send-icon">↑</text>
