@@ -48,7 +48,7 @@ page { background: #ededed; height: 100%; font-family: -apple-system, BlinkMacSy
 .list-foot { height: 48rpx; }
 
 /* ---- 消息行（无头像） ---- */
-.msg-row { display: flex; margin-bottom: 28rpx; }
+.msg-row { display: flex; margin-bottom: 28rpx; overflow: hidden; }
 .msg-row-right { justify-content: flex-end; }
 .msg-body { max-width: 78%; padding: 22rpx 28rpx; border-radius: 20rpx; font-size: 30rpx; line-height: 1.65; word-break: break-all; }
 .msg-body-ai {

@@ -4,10 +4,7 @@ Page({
     inputValue: '',
     scrollToId: '',
     isLoading: false,
-    messages: [{
-      id: 'msg-0', role: 'ai',
-      content: '你好！我是项目管理智能助手。请先选择知识库，然后开始提问吧！'
-    }],
+    messages: [],
     projects: [],
     selectedProjectIndex: 0,
     selectedProjectName: '项目列表',
