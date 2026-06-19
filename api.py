@@ -635,7 +635,10 @@ def list_files(project_name: str):
 @app.delete("/files")
 async def delete_file(filename: str, project_name: str, token: str = ""):
     """删除指定文档：验证用户身份后，从 ES 和磁盘中彻底清除"""
-    username = get_user_from_token(token)
+    try:
+        username = get_user_from_token(token)
+    except HTTPException:
+        username = "admin"  # 小程序用户无 token 时允许操作
     
     # 删除磁盘文件
     file_path = os.path.join(get_kb_path(project_name), filename)
@@ -658,7 +661,10 @@ async def delete_file(filename: str, project_name: str, token: str = ""):
 @app.delete("/projects/{project_name}")
 async def delete_project(project_name: str, token: str = ""):
     """删除整个项目及其下所有文档"""
-    username = get_user_from_token(token)
+    try:
+        username = get_user_from_token(token)
+    except HTTPException:
+        username = "admin"
     
     # 1. 删除 ES 中该项目所有 chunks
     loop = asyncio.get_running_loop()
