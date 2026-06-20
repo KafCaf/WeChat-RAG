@@ -77,19 +77,7 @@ Page({
     this.setData({ currentProject: '', messages: [], conversations: [], conversationId: null })
   },
 
-  homeStartUpload() {
-    const self = this
-    wx.showModal({
-      title: '新建知识库', editable: true, placeholderText: '输入知识库名称',
-      success(r) {
-        if (r.confirm && r.content) {
-          const name = r.content.trim()
-          self.setData({ newProjectName: name })
-          self._chooseFileForNew(name)
-        }
-      }
-    })
-  },
+  homeStartUpload() { this.startUpload() },
 
   // ---- 会话 ----
   fetchConversations() {
@@ -133,15 +121,19 @@ Page({
   // ---- 上传 ----
   startUpload() {
     const self = this
+    const isHome = !this.data.currentProject
+    const itemList = isHome ? ['上传到现有知识库', '新建知识库并上传'] : ['上传到当前知识库', '上传到新建知识库']
     wx.showActionSheet({
-      itemList: ['上传到当前知识库', '上传到新建知识库'],
-      success(res) {
-        if (res.tapIndex === 0) { self.chooseFile() }
-        else {
+      itemList,
+      success(r) {
+        if (r.tapIndex === 0) {
+          if (isHome) { self._pickProjectThenUpload() }
+          else { self._pickFile('existing') }
+        } else {
           wx.showModal({
-            title: '新建知识库', editable: true, placeholderText: '输入名称',
-            success(r) {
-              if (r.confirm && r.content) { self.setData({ newProjectName: r.content.trim() }); self._chooseFileForNew(r.content.trim()) }
+            title: '新建知识库', editable: true, placeholderText: '输入知识库名称',
+            success(mr) {
+              if (mr.confirm && mr.content) self._pickFile('new', mr.content.trim())
             }
           })
         }
@@ -149,31 +141,43 @@ Page({
     })
   },
 
-  chooseFile() {
-    wx.chooseMessageFile({
-      count: 1, type: 'file', extension: ['.pdf', '.doc', '.docx', '.txt', '.md'],
-      success: (res) => {
-        if (res.tempFiles[0].size > 20*1024*1024) { wx.showToast({ title: '文件不超过 20MB', icon: 'none' }); return }
-        this.uploadToServer(res.tempFiles[0], 'existing')
-      }
-    })
-  },
-
-  _chooseFileForNew(projectName) {
-    wx.chooseMessageFile({
-      count: 1, type: 'file', extension: ['.pdf', '.doc', '.docx', '.txt', '.md'],
-      success: (res) => {
-        if (res.tempFiles[0].size > 20*1024*1024) { wx.showToast({ title: '文件不超过 20MB', icon: 'none' }); return }
-        this.uploadToServer(res.tempFiles[0], 'new')
-      }
-    })
-  },
-
-  uploadToServer(file, mode) {
-    wx.showLoading({ title: '入库中...', mask: true })
-    const projectName = mode === 'new' ? this.data.newProjectName : this.data.currentProject
-
+  _pickProjectThenUpload() {
     const self = this
+    wx.showActionSheet({
+      itemList: this.data.projects,
+      success(r) {
+        const name = self.data.projects[r.tapIndex]
+        self.setData({ currentProject: name })
+        self._pickFile('existing')
+      }
+    })
+  },
+
+  _pickFile(mode, newProjectName) {
+    wx.chooseMessageFile({
+      count: 1, type: 'file', extension: ['.pdf', '.doc', '.docx', '.txt', '.md'],
+      success: (res) => {
+        const file = res.tempFiles[0]
+        if (file.size > 20*1024*1024) { wx.showToast({ title: '文件不超过 20MB', icon: 'none' }); return }
+        const originName = file.name
+        wx.showModal({
+          title: '文档命名', editable: true, content: originName, placeholderText: originName,
+          success(mr) {
+            const finalName = (mr.confirm && mr.content) ? mr.content.trim() : originName
+            file.customName = finalName
+            if (newProjectName) self.setData({ newProjectName: newProjectName })
+            self.uploadToServer(file, mode, newProjectName)
+          }
+        })
+      }
+    })
+  },
+
+  uploadToServer(file, mode, newProjectName) {
+    wx.showLoading({ title: '入库中...', mask: true })
+    const projectName = newProjectName || this.data.currentProject
+    const self = this
+
     wx.uploadFile({
       url: app.globalData.API_BASE_URL + '/upload', filePath: file.path, name: 'file',
       formData: { project_name: projectName },
@@ -183,7 +187,10 @@ Page({
         if (res.statusCode === 200) {
           wx.showToast({ title: '入库成功', icon: 'success' })
           self.fetchProjects()
-          if (mode === 'new') self.setData({ currentProject: projectName, messages: [], conversationId: null, newProjectName: '' })
+          if (newProjectName) {
+            // 新建项目：自动跳转到新知识库
+            setTimeout(() => self.setData({ currentProject: projectName, messages: [], conversationId: null, newProjectName: '' }), 500)
+          }
         } else { wx.showToast({ title: data.detail || '失败', icon: 'none' }) }
       },
       fail() { wx.showToast({ title: '网络异常', icon: 'none' }) },

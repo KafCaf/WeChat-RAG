@@ -6,9 +6,6 @@
   </view>
   <scroll-view class="home-list" scroll-y="true" enhanced="true" show-scrollbar="{{false}}">
     <view class="kb-card" wx:for="{{projects}}" wx:key="*this" bindtap="enterProject" data-name="{{item}}">
-      <view class="kb-card-icon">
-        <text class="kb-card-emoji">{{item === '选房通知' ? '🏠' : item === '国际杰青计划' ? '🌍' : item === '科技部培训班' ? '🔬' : '📄'}}</text>
-      </view>
       <view class="kb-card-info">
         <text class="kb-card-name">{{item}}</text>
         <text class="kb-card-desc">点击进入问答</text>
@@ -21,7 +18,7 @@
   </scroll-view>
   <view class="home-bar">
     <view class="tool-item" bindtap="homeStartUpload">
-      <text class="tool-label">上传文档到新知识库</text>
+      <text class="tool-label">上传文档</text>
     </view>
   </view>
 </view>
