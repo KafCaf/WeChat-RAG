@@ -70,8 +70,11 @@ Page({
 
   enterProject(e) {
     const name = e.currentTarget.dataset.name
-    setTimeout(() => this.setData({ currentProject: name, messages: [], conversationId: null }), 100)
-    this.fetchConversations()
+    const self = this
+    setTimeout(() => {
+      self.setData({ currentProject: name, messages: [], conversationId: null })
+      self.fetchConversations()
+    }, 100)
   },
 
   goHome() {
@@ -86,7 +89,7 @@ Page({
   _manageProject(projectName) {
     const self = this
     wx.showActionSheet({
-      itemList: ['重命名', '查看/删除文档', '删除项目'],
+      itemList: ['重命名项目', '查看/删除文档', '删除项目'],
       success(r) {
         if (r.tapIndex === 0) { self._renameProject(projectName) }
         else if (r.tapIndex === 1) { self._showProjectFiles(projectName) }
