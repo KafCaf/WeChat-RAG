@@ -6,12 +6,10 @@ Page({
     isLoading: false,
     messages: [],
     projects: [],
-    selectedProjectIndex: 0,
-    selectedProjectName: '项目列表',
+    currentProject: '',
     statusBarHeight: 20,
     navBarHeight: 108,
     menuButtonRight: 16,
-    uploadMode: null,
     newProjectName: '',
     keyboardHeight: 0,
     token: '',
@@ -32,21 +30,16 @@ Page({
     this.wxLogin()
   },
 
-  // ---- 微信静默登录 ----
+  // ---- 微信登录 ----
   wxLogin() {
     const cached = wx.getStorageSync('rag_token')
-    if (cached) {
-      this.setData({ token: cached })
-      this.fetchProjects()
-      return
-    }
+    if (cached) { this.setData({ token: cached }); this.fetchProjects(); return }
     const self = this
     wx.login({
       success(res) {
         if (res.code) {
           wx.request({
-            url: app.globalData.API_BASE_URL + '/wx-login',
-            method: 'POST',
+            url: app.globalData.API_BASE_URL + '/wx-login', method: 'POST',
             data: { code: res.code },
             success(r) {
               if (r.data && r.data.token) {
@@ -61,40 +54,51 @@ Page({
     })
   },
 
-  // ---- 项目列表 ----
+  // ---- 首页 ----
   fetchProjects() {
     wx.request({
       url: app.globalData.API_BASE_URL + '/projects',
       success: (res) => {
-        console.log('projects response:', res.statusCode, JSON.stringify(res.data).substring(0, 200))
         if (res.data && res.data.status === 'success') {
           const list = res.data.projects.filter(p => p !== '全部项目 (全局搜索)')
-          console.log('projects list:', list)
-          this.setData({ projects: list, selectedProjectIndex: 0, selectedProjectName: '项目列表' })
+          this.setData({ projects: list })
         }
-      },
-      fail: (err) => { console.error('projects fail:', JSON.stringify(err)) }
+      }
     })
   },
 
-  onProjectChange(e) {
-    const index = e.detail.value
-    const name = this.data.projects[index]
-    this.setData({ selectedProjectIndex: index, selectedProjectName: name, conversationId: null, messages: [] })
+  enterProject(e) {
+    const name = e.currentTarget.dataset.name
+    this.setData({ currentProject: name, messages: [], conversationId: null })
     this.fetchConversations()
   },
 
-  // ---- 会话管理 ----
+  goHome() {
+    this.setData({ currentProject: '', messages: [], conversations: [], conversationId: null })
+  },
+
+  homeStartUpload() {
+    const self = this
+    wx.showModal({
+      title: '新建知识库', editable: true, placeholderText: '输入知识库名称',
+      success(r) {
+        if (r.confirm && r.content) {
+          const name = r.content.trim()
+          self.setData({ newProjectName: name })
+          self._chooseFileForNew(name)
+        }
+      }
+    })
+  },
+
+  // ---- 会话 ----
   fetchConversations() {
-    const pName = this.data.selectedProjectName
-    if (!this.data.token || pName === '项目列表') return
+    if (!this.data.token || !this.data.currentProject) return
     const self = this
     wx.request({
-      url: app.globalData.API_BASE_URL + '/conversations?token=' + self.data.token + '&project_name=' + encodeURIComponent(pName),
+      url: app.globalData.API_BASE_URL + '/conversations?token=' + self.data.token + '&project_name=' + encodeURIComponent(self.data.currentProject),
       success(res) {
-        if (res.data && res.data.conversations) {
-          self.setData({ conversations: res.data.conversations })
-        }
+        if (res.data && res.data.conversations) self.setData({ conversations: res.data.conversations })
       }
     })
   },
@@ -105,10 +109,7 @@ Page({
     wx.showActionSheet({
       itemList: ['+ 新建对话', ...list.map(c => c.title + (c.id === this.data.conversationId ? ' ✓' : ''))],
       success(r) {
-        if (r.tapIndex === 0) {
-          self.setData({ conversationId: null, messages: [] })
-          return
-        }
+        if (r.tapIndex === 0) { self.setData({ conversationId: null, messages: [] }); return }
         const conv = list[r.tapIndex - 1]
         self.switchConversation(conv.id)
       }
@@ -122,56 +123,25 @@ Page({
       success(res) {
         if (res.data && res.data.history) {
           const msgs = []
-          for (const h of res.data.history) {
-            msgs.push({ id: `msg-${Date.now()}`, role: h.role === 'assistant' ? 'ai' : h.role, content: h.content })
-          }
+          for (const h of res.data.history) msgs.push({ id: `msg-${Date.now()}`, role: h.role === 'assistant' ? 'ai' : h.role, content: h.content })
           self.setData({ messages: msgs, conversationId: convId, scrollToId: 'bottom-spacer' })
         }
       }
     })
   },
 
-  deleteConversation(convId) {
-    const self = this
-    wx.showModal({
-      title: '删除会话',
-      content: '确定删除这个会话？',
-      success(r) {
-        if (r.confirm) {
-          wx.request({
-            url: app.globalData.API_BASE_URL + '/conversations/' + convId + '?token=' + self.data.token,
-            method: 'DELETE',
-            success() {
-              if (self.data.conversationId === convId) {
-                self.setData({ conversationId: null, messages: [] })
-              }
-              self.fetchConversations()
-            }
-          })
-        }
-      }
-    })
-  },
-
-  // ---- 上传流程 ----
+  // ---- 上传 ----
   startUpload() {
     const self = this
     wx.showActionSheet({
       itemList: ['上传到当前知识库', '上传到新建知识库'],
       success(res) {
-        if (res.tapIndex === 0) {
-          self.chooseFile()
-        } else {
-          // 新建项目：先弹窗输入名称
+        if (res.tapIndex === 0) { self.chooseFile() }
+        else {
           wx.showModal({
-            title: '新建知识库',
-            editable: true,
-            placeholderText: '输入知识库名称',
-            success(modalRes) {
-              if (modalRes.confirm && modalRes.content) {
-                self.setData({ newProjectName: modalRes.content.trim() })
-                self._chooseFileForNew(modalRes.content.trim())
-              }
+            title: '新建知识库', editable: true, placeholderText: '输入名称',
+            success(r) {
+              if (r.confirm && r.content) { self.setData({ newProjectName: r.content.trim() }); self._chooseFileForNew(r.content.trim()) }
             }
           })
         }
@@ -181,83 +151,43 @@ Page({
 
   chooseFile() {
     wx.chooseMessageFile({
-      count: 1, type: 'file',
-      extension: ['.pdf', '.doc', '.docx', '.txt', '.md'],
+      count: 1, type: 'file', extension: ['.pdf', '.doc', '.docx', '.txt', '.md'],
       success: (res) => {
-        const file = res.tempFiles[0]
-        if (file.size > 20 * 1024 * 1024) {
-          wx.showToast({ title: '文件不能超过 20MB', icon: 'none' })
-          return
-        }
-        this.setData({ uploadMode: 'existing' })
-        this.uploadToServer(file)
+        if (res.tempFiles[0].size > 20*1024*1024) { wx.showToast({ title: '文件不超过 20MB', icon: 'none' }); return }
+        this.uploadToServer(res.tempFiles[0], 'existing')
       }
     })
   },
 
   _chooseFileForNew(projectName) {
     wx.chooseMessageFile({
-      count: 1, type: 'file',
-      extension: ['.pdf', '.doc', '.docx', '.txt', '.md'],
+      count: 1, type: 'file', extension: ['.pdf', '.doc', '.docx', '.txt', '.md'],
       success: (res) => {
-        const file = res.tempFiles[0]
-        if (file.size > 20 * 1024 * 1024) {
-          wx.showToast({ title: '文件不能超过 20MB', icon: 'none' })
-          return
-        }
-        this.setData({ uploadMode: 'new' })
-        this.uploadToServer(file)
+        if (res.tempFiles[0].size > 20*1024*1024) { wx.showToast({ title: '文件不超过 20MB', icon: 'none' }); return }
+        this.uploadToServer(res.tempFiles[0], 'new')
       }
     })
   },
 
-  uploadToServer(file) {
-    this.setData({ isUploading: true })
-    wx.showLoading({ title: '文档解析入库中...', mask: true })
-
-    let projectName
-    if (this.data.uploadMode === 'new' && this.data.newProjectName) {
-      projectName = this.data.newProjectName
-    } else {
-      projectName = this.data.selectedProjectName === '项目列表'
-        ? '全部项目 (全局搜索)'
-        : this.data.selectedProjectName
-    }
+  uploadToServer(file, mode) {
+    wx.showLoading({ title: '入库中...', mask: true })
+    const projectName = mode === 'new' ? this.data.newProjectName : this.data.currentProject
 
     const self = this
     wx.uploadFile({
-      url: app.globalData.API_BASE_URL + '/upload',
-      filePath: file.path, name: 'file',
-      formData: { 'project_name': projectName },
+      url: app.globalData.API_BASE_URL + '/upload', filePath: file.path, name: 'file',
+      formData: { project_name: projectName },
       success(res) {
         let data
         try { data = JSON.parse(res.data) } catch (e) { data = res.data }
         if (res.statusCode === 200) {
           wx.showToast({ title: '入库成功', icon: 'success' })
-          wx.removeStorageSync(`suggest_${projectName}`)
-          self.setData({
-            messages: [...self.data.messages, {
-              id: `msg-${Date.now()}`, role: 'system',
-              content: `文件《${file.name}》已加入知识库`
-            }],
-            scrollToId: 'bottom-spacer',
-            uploadMode: null, newProjectName: ''
-          })
           self.fetchProjects()
-          if (self.data.uploadMode === 'new') {
-            // 新建项目：等列表刷新后自动选中
-            setTimeout(() => {
-              const projects = self.data.projects
-              const idx = projects.indexOf(projectName)
-              if (idx >= 0) self.setData({ selectedProjectIndex: idx, selectedProjectName: projectName })
-            }, 500)
-          }
-        } else {
-          wx.showToast({ title: data.detail || '上传失败', icon: 'none' })
-        }
+          if (mode === 'new') self.setData({ currentProject: projectName, messages: [], conversationId: null, newProjectName: '' })
+        } else { wx.showToast({ title: data.detail || '失败', icon: 'none' }) }
       },
-      fail() { wx.showToast({ title: '网络连接失败', icon: 'none' }) },
-      complete() { wx.hideLoading(); self.setData({ isUploading: false, uploadMode: null, newProjectName: '' }) }
+      fail() { wx.showToast({ title: '网络异常', icon: 'none' }) },
+      complete() { wx.hideLoading() }
     })
   },
 
@@ -267,48 +197,30 @@ Page({
     wx.showActionSheet({
       itemList: ['查看文档列表', '删除当前知识库'],
       success(res) {
-        if (res.tapIndex === 0) {
-          self.showFileList()
-        } else {
-          self.confirmDeleteProject()
-        }
+        if (res.tapIndex === 0) self.showFileList()
+        else self.confirmDeleteProject()
       }
     })
   },
 
   showFileList() {
     const self = this
-    const pName = this.data.selectedProjectName
     wx.request({
-      url: app.globalData.API_BASE_URL + '/files?project_name=' + encodeURIComponent(pName),
+      url: app.globalData.API_BASE_URL + '/files?project_name=' + encodeURIComponent(this.data.currentProject),
       success(res) {
-        if (!res.data || !res.data.files || res.data.files.length === 0) {
-          wx.showToast({ title: '知识库暂无文档', icon: 'none' })
-          return
-        }
-        const names = res.data.files.map(f => {
-          const raw = f.split('/').pop()
-          // 微信上传的临时文件名，用 ES 里存的真实文件名
-          return raw
-        })
+        if (!res.data || !res.data.files || !res.data.files.length) { wx.showToast({ title: '暂无文档', icon: 'none' }); return }
         wx.showActionSheet({
-          itemList: names.map(n => '删除: ' + n),
+          itemList: res.data.files.map(f => '删除: ' + f),
           success(r) {
             const file = res.data.files[r.tapIndex]
             wx.showModal({
-              title: '确认删除',
-              content: `将删除「${file.split('/').pop()}」`,
-              confirmText: '删除',
-              confirmColor: '#ef4444',
+              title: '确认删除', content: '将删除「' + file + '」', confirmText: '删除', confirmColor: '#ef4444',
               success(mr) {
                 if (mr.confirm) {
                   wx.request({
-                    url: app.globalData.API_BASE_URL + '/files?filename=' + encodeURIComponent(file) + '&project_name=' + encodeURIComponent(pName),
+                    url: app.globalData.API_BASE_URL + '/files?filename=' + encodeURIComponent(file) + '&project_name=' + encodeURIComponent(self.data.currentProject),
                     method: 'DELETE',
-                    success() {
-                      wx.showToast({ title: '已删除', icon: 'success' })
-                      self.setData({ messages: [...self.data.messages, { id: `msg-${Date.now()}`, role: 'system', content: `文档已删除` }], scrollToId: 'bottom-spacer' })
-                    }
+                    success() { wx.showToast({ title: '已删除', icon: 'success' }); self.fetchProjects() }
                   })
                 }
               }
@@ -320,21 +232,14 @@ Page({
   },
 
   confirmDeleteProject() {
-    const pName = this.data.selectedProjectName
     const self = this
     wx.showModal({
-      title: '删除知识库',
-      content: `确定删除「${pName}」及其所有文档？此操作不可撤销。`,
+      title: '删除知识库', content: '确定删除「' + this.data.currentProject + '」？', confirmColor: '#ef4444',
       success(res) {
         if (res.confirm) {
           wx.request({
-            url: app.globalData.API_BASE_URL + '/projects/' + encodeURIComponent(pName),
-            method: 'DELETE',
-            success() {
-              wx.showToast({ title: '已删除', icon: 'success' })
-              self.setData({ selectedProjectIndex: 0, selectedProjectName: '项目列表', messages: [] })
-              self.fetchProjects()
-            }
+            url: app.globalData.API_BASE_URL + '/projects/' + encodeURIComponent(self.data.currentProject), method: 'DELETE',
+            success() { wx.showToast({ title: '已删除', icon: 'success' }); self.setData({ currentProject: '', messages: [] }); self.fetchProjects() }
           })
         }
       }
@@ -346,11 +251,10 @@ Page({
 
   sendMessage() {
     const text = this.data.inputValue.trim()
-    if (!text || this.data.isLoading) return
-    const newUser = { id: `msg-${Date.now()}`, role: 'user', content: text }
+    if (!text || this.data.isLoading || !this.data.currentProject) return
     const loading = { id: 'msg-loading', role: 'ai', isLoadingBubble: true }
     this.setData({
-      messages: [...this.data.messages, newUser, loading],
+      messages: [...this.data.messages, { id: `msg-${Date.now()}`, role: 'user', content: text }, loading],
       inputValue: '', scrollToId: 'bottom-spacer', isLoading: true
     })
     this.fetchAiResponse(text, 'msg-loading')
@@ -358,23 +262,16 @@ Page({
 
   fetchAiResponse(userText, loadingMsgId) {
     wx.showNavigationBarLoading()
-    const pName = this.data.selectedProjectName === '项目列表'
-      ? '全部项目 (全局搜索)' : this.data.selectedProjectName
-
     const self = this
     wx.request({
-      url: app.globalData.API_BASE_URL + '/chat',
-      method: 'POST',
-      timeout: 60000,
+      url: app.globalData.API_BASE_URL + '/chat', method: 'POST',
       header: { 'content-type': 'application/json' },
-      data: { message: userText, project_name: pName, history: [], top_k: 15, temperature: 0.1, token: self.data.token, conversation_id: self.data.conversationId },
+      data: { message: userText, project_name: self.data.currentProject, history: [], top_k: 15, temperature: 0.1, token: self.data.token, conversation_id: self.data.conversationId },
+      timeout: 60000,
       success(res) {
         if (res.statusCode === 200 && res.data.answer) {
           const msgs = self.data.messages.filter(m => m.id !== loadingMsgId)
-          const update = {
-            messages: [...msgs, { id: `msg-${Date.now()}`, role: 'ai', content: res.data.answer }],
-            scrollToId: 'bottom-spacer'
-          }
+          const update = { messages: [...msgs, { id: `msg-${Date.now()}`, role: 'ai', content: res.data.answer }], scrollToId: 'bottom-spacer' }
           if (res.data.conversation_id && res.data.conversation_id !== self.data.conversationId) {
             update.conversationId = res.data.conversation_id
             self.fetchConversations()
@@ -382,12 +279,12 @@ Page({
           self.setData(update)
         } else {
           self.setData({ messages: self.data.messages.filter(m => m.id !== loadingMsgId) })
-          wx.showToast({ title: '后端处理异常', icon: 'none' })
+          wx.showToast({ title: '后端异常', icon: 'none' })
         }
       },
       fail() {
         self.setData({ messages: self.data.messages.filter(m => m.id !== loadingMsgId) })
-        wx.showToast({ title: '网络连接失败', icon: 'none' })
+        wx.showToast({ title: '网络异常', icon: 'none' })
       },
       complete() { wx.hideNavigationBarLoading(); self.setData({ isLoading: false }) }
     })

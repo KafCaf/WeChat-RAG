@@ -1,79 +1,90 @@
-<!-- 顶部导航 -->
-<view class="nav-bar" style="padding-top: {{statusBarHeight}}px;">
-  <view class="nav-content" style="padding-right: {{menuButtonRight}}px;">
-    <picker class="nav-picker" mode="selector" range="{{projects}}" value="{{selectedProjectIndex}}" bindchange="onProjectChange">
-      <view class="nav-project">
-        <text class="nav-project-text">{{selectedProjectName === '项目列表' ? '选择知识库' : selectedProjectName}}</text>
-        <text class="nav-arrow">▼</text>
+<!-- ========== 首页：知识库选择 ========== -->
+<view class="home-page" wx:if="{{!currentProject}}">
+  <view class="home-header" style="padding-top: {{statusBarHeight + 20}}px;">
+    <text class="home-title">文档问答</text>
+    <text class="home-sub">选择知识库开始提问</text>
+  </view>
+  <scroll-view class="home-list" scroll-y="true" enhanced="true" show-scrollbar="{{false}}">
+    <view class="kb-card" wx:for="{{projects}}" wx:key="*this" bindtap="enterProject" data-name="{{item}}">
+      <view class="kb-card-icon">
+        <text class="kb-card-emoji">{{item === '选房通知' ? '🏠' : item === '国际杰青计划' ? '🌍' : item === '科技部培训班' ? '🔬' : '📄'}}</text>
       </view>
-    </picker>
+      <view class="kb-card-info">
+        <text class="kb-card-name">{{item}}</text>
+        <text class="kb-card-desc">点击进入问答</text>
+      </view>
+      <text class="kb-card-arrow">›</text>
+    </view>
+    <view class="home-footer">
+      <text class="home-footer-text">底部工具栏可上传新文档</text>
+    </view>
+  </scroll-view>
+  <view class="home-bar">
+    <view class="tool-item" bindtap="homeStartUpload">
+      <text class="tool-label">上传文档到新知识库</text>
+    </view>
   </view>
 </view>
 
-<!-- 主容器 -->
-<view class="main-container" style="padding-top: {{navBarHeight}}px;">
-
-  <!-- 欢迎页 -->
-  <view class="welcome-area" wx:if="{{messages.length === 0}}">
-    <text class="welcome-title">项目管理智能助手</text>
-    <text class="welcome-sub">选择知识库，开始提问</text>
+<!-- ========== 聊天页 ========== -->
+<view class="chat-page" wx:else>
+  <!-- 顶栏 -->
+  <view class="chat-nav" style="padding-top: {{statusBarHeight + 6}}px;">
+    <view class="chat-nav-row" style="padding-right: {{menuButtonRight}}px;">
+      <view class="chat-nav-back" bindtap="goHome">
+        <text class="back-arrow">‹</text>
+        <text class="chat-nav-title">{{currentProject}}</text>
+        <text class="nav-down">▼</text>
+      </view>
+    </view>
   </view>
 
-  <!-- 消息列表 -->
-  <scroll-view 
-    class="message-list {{messages.length > 0 ? '' : 'hide'}}"
-    scroll-y="true" 
-    scroll-into-view="{{scrollToId}}"
-    scroll-with-animation="true"
-    enhanced="true"
-    show-scrollbar="{{false}}"
-  >
-    <block wx:for="{{messages}}" wx:key="id">
-      <block wx:if="{{item.role === 'system'}}">
-        <view class="sys-msg" id="{{item.id}}"><text class="sys-text">{{item.content}}</text></view>
-      </block>
-      <block wx:else>
-        <view class="msg-row {{item.role === 'user' ? 'msg-row-right' : ''}}" id="{{item.id}}">
-          <view class="msg-body {{item.role === 'user' ? 'msg-body-user' : 'msg-body-ai'}}">
-            <view wx:if="{{item.isLoadingBubble}}" class="typing-dots">
-              <view class="typing-dot"></view><view class="typing-dot"></view><view class="typing-dot"></view>
+  <!-- 欢迎/消息区 -->
+  <view class="chat-body" style="padding-top: {{navBarHeight}}px;">
+    <view class="welcome-area" wx:if="{{messages.length === 0}}">
+      <text class="welcome-title">{{currentProject}}</text>
+      <text class="welcome-sub">输入问题开始对话</text>
+    </view>
+    <scroll-view 
+      class="message-list {{messages.length > 0 ? '' : 'hide'}}"
+      scroll-y="true" 
+      scroll-into-view="{{scrollToId}}"
+      scroll-with-animation="true"
+      enhanced="true"
+      show-scrollbar="{{false}}"
+    >
+      <block wx:for="{{messages}}" wx:key="id">
+        <block wx:if="{{item.role === 'system'}}">
+          <view class="sys-msg" id="{{item.id}}"><text class="sys-text">{{item.content}}</text></view>
+        </block>
+        <block wx:else>
+          <view class="msg-row {{item.role === 'user' ? 'msg-row-right' : ''}}" id="{{item.id}}">
+            <view class="msg-body {{item.role === 'user' ? 'msg-body-user' : 'msg-body-ai'}}">
+              <view wx:if="{{item.isLoadingBubble}}" class="typing">
+                <view class="typing-dot"></view><view class="typing-dot"></view><view class="typing-dot"></view>
+              </view>
+              <text wx:else class="msg-text" user-select="true">{{item.content}}</text>
             </view>
-            <text wx:else class="msg-text" user-select="true">{{item.content}}</text>
           </view>
-        </view>
+        </block>
       </block>
-    </block>
-    <view class="list-foot" id="bottom-spacer"></view>
-  </scroll-view>
+      <view class="list-foot" id="bottom-spacer"></view>
+    </scroll-view>
+  </view>
 
-  <!-- 底部操作栏 -->
-  <view class="input-bar" style="bottom: {{keyboardHeight}}px;">
-    <view class="input-row">
-      <input 
-        class="msg-input"
-        value="{{inputValue}}" 
-        bindinput="handleInput" 
-        bindconfirm="sendMessage"
-        placeholder="输入问题..."
-        confirm-type="send"
-        cursor-spacing="12"
-        adjust-position="{{false}}"
-      />
-      <view class="send-btn {{inputValue && !isLoading ? 'send-active' : ''}}" bindtap="sendMessage">
+  <!-- 底部输入栏 -->
+  <view class="chat-bar" style="bottom: {{keyboardHeight}}px;">
+    <view class="bar-row">
+      <input class="bar-input" value="{{inputValue}}" bindinput="handleInput" bindconfirm="sendMessage"
+        placeholder="输入问题..." confirm-type="send" cursor-spacing="12" adjust-position="{{false}}"/>
+      <view class="bar-send {{inputValue && !isLoading ? 'send-active' : ''}}" bindtap="sendMessage">
         <text class="send-icon">↑</text>
       </view>
     </view>
-    <view class="input-tools">
-      <view class="tool-item" bindtap="startUpload">
-        <text class="tool-label">上传文档</text>
-      </view>
-      <view class="tool-item" bindtap="showHistory" wx:if="{{selectedProjectName !== '项目列表' && token}}">
-        <text class="tool-label">历史</text>
-      </view>
-      <view class="tool-item" bindtap="showManageOptions" wx:if="{{selectedProjectName !== '项目列表'}}">
-        <text class="tool-label">管理</text>
-      </view>
+    <view class="bar-tools">
+      <view class="tool-item" bindtap="startUpload"><text class="tool-label">上传文档</text></view>
+      <view class="tool-item" wx:if="{{token}}" bindtap="showHistory"><text class="tool-label">历史</text></view>
+      <view class="tool-item" bindtap="showManageOptions"><text class="tool-label">管理</text></view>
     </view>
   </view>
-
 </view>
