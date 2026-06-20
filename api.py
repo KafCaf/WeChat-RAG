@@ -228,16 +228,28 @@ async def chat_and_rag(request: ChatRequest):
             "Content-Type": "application/json"
         }
         
-        # 优化项2：记录 LLM 请求耗时
+        # LLM API 调用（含 3 次重试 + 指数退避）
         start_llm_time = time.time()
-        response = await http_client.post(DASHSCOPE_LLM_URL, json=payload, headers=headers)
-        llm_time = time.time() - start_llm_time
+        max_retries = 3
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                response = await http_client.post(DASHSCOPE_LLM_URL, json=payload, headers=headers)
+                if response.status_code == 200:
+                    break
+                last_error = f"HTTP {response.status_code}: {response.text[:200]}"
+            except Exception as e:
+                last_error = str(e)
+            if attempt < max_retries - 1:
+                wait = 2 ** attempt  # 1s, 2s, 4s
+                print(f"[LLM重试] 第 {attempt+1} 次失败 ({last_error[:80]})，{wait}s 后重试...")
+                await asyncio.sleep(wait)
         
-        print(f"[性能监控] 检索耗时: {retrieval_time:.2f}s | LLM API耗时: {llm_time:.2f}s")
+        llm_time = time.time() - start_llm_time
+        print(f"[性能监控] 检索耗时: {retrieval_time:.2f}s | LLM API耗时: {llm_time:.2f}s (第{attempt+1}次)")
         
         if response.status_code != 200:
-            error_msg = f"DashScope API 调用失败，HTTP状态码: {response.status_code}, 报文: {response.text}"
-            print(error_msg)
+            print(f"DashScope API 调用最终失败: {last_error}")
             raise HTTPException(status_code=502, detail="外部大模型服务网关异常。")
             
         result_json = response.json()
@@ -395,6 +407,11 @@ def init_db():
         cursor.execute("ALTER TABLE conversations ADD COLUMN project_name TEXT DEFAULT NULL")
     except:
         pass
+    # 兼容旧表：如果 openid 列不存在则添加
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN openid TEXT DEFAULT NULL")
+    except:
+        pass
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -443,6 +460,50 @@ def register_api(user: UserCreate):
     conn.close()
     
     return {"status": "success", "message": f"用户 {user.username} 注册成功"}
+
+# ==================== 微信小程序静默登录 ====================
+
+WX_APPID = os.getenv("WX_APPID", "wx3abc7e5d77ee3124")
+WX_SECRET = os.getenv("WX_SECRET", "")
+
+class WxLoginRequest(BaseModel):
+    code: str
+
+@app.post("/wx-login")
+async def wx_login(data: WxLoginRequest):
+    """微信小程序静默登录：code → openid → token"""
+    code = data.code
+    if not code or not WX_SECRET:
+        # 无 AppSecret 时回退：用开发工具模拟的 code 直接作为 openid
+        openid = code if code else f"dev_{int(time.time())}"
+    else:
+        try:
+            wx_url = f"https://api.weixin.qq.com/sns/jscode2session?appid={WX_APPID}&secret={WX_SECRET}&js_code={code}&grant_type=authorization_code"
+            resp = await http_client.get(wx_url)
+            wx_data = resp.json()
+            openid = wx_data.get("openid", "")
+            if not openid:
+                raise HTTPException(status_code=400, detail=f"微信登录失败: {wx_data.get('errmsg', 'unknown')}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"微信接口调用失败: {str(e)}")
+    
+    # 自动创建/查找用户
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT username FROM users WHERE openid=?", (openid,))
+    row = cursor.fetchone()
+    if row:
+        username = row[0]
+    else:
+        username = f"wx_{openid[:8]}"
+        cursor.execute("INSERT INTO users (username, hashed_password, openid) VALUES (?, '', ?)", (username, openid))
+        conn.commit()
+    conn.close()
+    
+    token = f"token_{username}"
+    return {"status": "success", "username": username, "token": token}
 
 # 5. 登录接口
 @app.post("/login")

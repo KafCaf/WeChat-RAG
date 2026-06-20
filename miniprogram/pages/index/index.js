@@ -13,7 +13,8 @@ Page({
     menuButtonRight: 16,
     uploadMode: null,
     newProjectName: '',
-    keyboardHeight: 0
+    keyboardHeight: 0,
+    token: ''
   },
 
   onLoad() {
@@ -26,7 +27,36 @@ Page({
     })
     const self = this
     wx.onKeyboardHeightChange(res => { self.setData({ keyboardHeight: res.height }) })
-    this.fetchProjects()
+    this.wxLogin()
+  },
+
+  // ---- 微信静默登录 ----
+  wxLogin() {
+    const cached = wx.getStorageSync('rag_token')
+    if (cached) {
+      this.setData({ token: cached })
+      this.fetchProjects()
+      return
+    }
+    const self = this
+    wx.login({
+      success(res) {
+        if (res.code) {
+          wx.request({
+            url: app.globalData.API_BASE_URL + '/wx-login',
+            method: 'POST',
+            data: { code: res.code },
+            success(r) {
+              if (r.data && r.data.token) {
+                wx.setStorageSync('rag_token', r.data.token)
+                self.setData({ token: r.data.token })
+                self.fetchProjects()
+              }
+            }
+          })
+        }
+      }
+    })
   },
 
   // ---- 项目列表 ----
@@ -271,7 +301,7 @@ Page({
       method: 'POST',
       timeout: 60000,
       header: { 'content-type': 'application/json' },
-      data: { message: userText, project_name: pName, history: [], top_k: 15, temperature: 0.1 },
+      data: { message: userText, project_name: pName, history: [], top_k: 15, temperature: 0.1, token: self.data.token },
       success(res) {
         if (res.statusCode === 200 && res.data.answer) {
           const msgs = self.data.messages.filter(m => m.id !== loadingMsgId)
