@@ -104,7 +104,14 @@ Page({
           wx.request({
             url: app.globalData.API_BASE_URL + '/projects/' + encodeURIComponent(projectName) + '?new_name=' + encodeURIComponent(r.content.trim()),
             method: 'PATCH',
-            success() { wx.showToast({ title: '已改名', icon: 'success' }); self.fetchProjects() },
+            success() { 
+              wx.showToast({ title: '已改名', icon: 'success' })
+              self.fetchProjects()
+              // 更新当前选中
+              if (self.data.currentProject === projectName) {
+                self.setData({ currentProject: r.content.trim() })
+              }
+            },
             fail() { wx.showToast({ title: '改名失败', icon: 'none' }) }
           })
         }
