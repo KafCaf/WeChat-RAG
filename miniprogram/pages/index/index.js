@@ -130,7 +130,7 @@ Page({
       success(res) {
         if (!res.data || !res.data.files || !res.data.files.length) { wx.showToast({ title: '暂无文档', icon: 'none' }); return }
         wx.showActionSheet({
-          itemList: res.data.files.map(f => '删除: ' + f),
+          itemList: res.data.files.map(f => '删除: ' + f.split('/').pop()),
           success(r) {
             const file = res.data.files[r.tapIndex]
             wx.showModal({
