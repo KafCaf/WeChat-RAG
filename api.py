@@ -288,7 +288,8 @@ async def chat_endpoint(request: ChatRequest):
 @app.post("/upload")
 async def upload_document(
     file: UploadFile = File(...), 
-    project_name: str = Form(...) 
+    project_name: str = Form(...),
+    custom_filename: str = Form("")
 ):
     try:
         # --- 1. 读取文件并执行物理大小拦截 ---
@@ -323,7 +324,8 @@ async def upload_document(
         # --- 4. 正常保存文件到本地 ---
         project_dir = get_kb_path(project_name)
         os.makedirs(project_dir, exist_ok=True)
-        file_path = os.path.join(project_dir, file.filename)
+        save_name = custom_filename if custom_filename else file.filename
+        file_path = os.path.join(project_dir, save_name)
         
         with open(file_path, "wb") as f:
             f.write(file_content) # 直接使用刚才读取在内存里的 file_content

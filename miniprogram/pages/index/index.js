@@ -163,7 +163,10 @@ Page({
         wx.showModal({
           title: '文档命名', editable: true, content: originName, placeholderText: originName,
           success(mr) {
-            const finalName = (mr.confirm && mr.content) ? mr.content.trim() : originName
+            let finalName = (mr.confirm && mr.content) ? mr.content.trim() : originName
+            // 自动保留原始文件后缀
+            const ext = originName.slice(originName.lastIndexOf('.'))
+            if (!finalName.endsWith(ext)) finalName += ext
             file.customName = finalName
             if (newProjectName) self.setData({ newProjectName: newProjectName })
             self.uploadToServer(file, mode, newProjectName)
@@ -180,7 +183,7 @@ Page({
 
     wx.uploadFile({
       url: app.globalData.API_BASE_URL + '/upload', filePath: file.path, name: 'file',
-      formData: { project_name: projectName },
+      formData: { project_name: projectName, custom_filename: file.customName || '' },
       success(res) {
         let data
         try { data = JSON.parse(res.data) } catch (e) { data = res.data }
