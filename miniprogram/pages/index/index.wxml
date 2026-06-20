@@ -69,6 +69,27 @@
     </scroll-view>
   </view>
 
+  <!-- 历史面板 -->
+  <view class="history-overlay" wx:if="{{showHistoryPanel}}" bindtap="toggleHistoryPanel">
+    <view class="history-panel" catchtap="">
+      <view class="history-header">
+        <text class="history-title">历史会话</text>
+        <text class="history-close" bindtap="toggleHistoryPanel">✕</text>
+      </view>
+      <scroll-view class="history-list" scroll-y="true">
+        <view class="history-new" bindtap="newConversation">+ 新建对话</view>
+        <view class="history-item {{item.id === conversationId ? 'history-active' : ''}}" wx:for="{{conversations}}" wx:key="id" bindtap="switchConversation" data-id="{{item.id}}">
+          <text class="history-name">{{item.title}}</text>
+          <view class="history-actions">
+            <text class="history-act" catchtap="renameConversation" data-id="{{item.id}}" data-title="{{item.title}}">✎</text>
+            <text class="history-act history-del" catchtap="deleteConversation" data-id="{{item.id}}">×</text>
+          </view>
+        </view>
+        <view wx:if="{{conversations.length === 0}}" class="history-empty">暂无历史会话</view>
+      </scroll-view>
+    </view>
+  </view>
+
   <!-- 底部输入栏 -->
   <view class="chat-bar" style="bottom: {{keyboardHeight}}px;">
     <view class="bar-row">
@@ -80,7 +101,7 @@
     </view>
     <view class="bar-tools">
       <view class="tool-item" bindtap="startUpload"><text class="tool-label">上传文档</text></view>
-      <view class="tool-item" wx:if="{{token}}" bindtap="showHistory"><text class="tool-label">历史</text></view>
+      <view class="tool-item" wx:if="{{token}}" bindtap="showHistory"><text class="tool-label">对话历史</text></view>
     </view>
   </view>
 </view>

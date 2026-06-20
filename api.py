@@ -681,6 +681,20 @@ async def delete_file(filename: str, project_name: str):
     return {"status": "success", "message": f"文件 {filename} 已删除"}
 
 
+@app.patch("/projects/{project_name}")
+async def rename_project(project_name: str, new_name: str = ""):
+    """重命名知识库项目"""
+    if not new_name:
+        raise HTTPException(status_code=400, detail="新名称不能为空")
+    old_path = get_kb_path(project_name)
+    new_path = get_kb_path(new_name)
+    if not os.path.exists(old_path):
+        raise HTTPException(status_code=404, detail="项目不存在")
+    if os.path.exists(new_path):
+        raise HTTPException(status_code=400, detail="新名称已存在")
+    os.rename(old_path, new_path)
+    return {"status": "success", "message": f"项目已改名为 {new_name}"}
+
 @app.delete("/projects/{project_name}")
 async def delete_project(project_name: str):
     """删除整个项目及其下所有文档"""

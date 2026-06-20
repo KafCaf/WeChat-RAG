@@ -14,7 +14,8 @@ Page({
     keyboardHeight: 0,
     token: '',
     conversations: [],
-    conversationId: null
+    conversationId: null,
+    showHistoryPanel: false
   },
 
   onLoad() {
@@ -69,7 +70,7 @@ Page({
 
   enterProject(e) {
     const name = e.currentTarget.dataset.name
-    this.setData({ currentProject: name, messages: [], conversationId: null })
+    setTimeout(() => this.setData({ currentProject: name, messages: [], conversationId: null }), 100)
     this.fetchConversations()
   },
 
@@ -85,10 +86,28 @@ Page({
   _manageProject(projectName) {
     const self = this
     wx.showActionSheet({
-      itemList: ['查看/删除文档', '删除项目'],
+      itemList: ['重命名', '查看/删除文档', '删除项目'],
       success(r) {
-        if (r.tapIndex === 0) { self._showProjectFiles(projectName) }
+        if (r.tapIndex === 0) { self._renameProject(projectName) }
+        else if (r.tapIndex === 1) { self._showProjectFiles(projectName) }
         else { self._confirmDeleteProject(projectName) }
+      }
+    })
+  },
+
+  _renameProject(projectName) {
+    const self = this
+    wx.showModal({
+      title: '重命名项目', editable: true, content: projectName, placeholderText: '新名称',
+      success(r) {
+        if (r.confirm && r.content && r.content.trim() !== projectName) {
+          wx.request({
+            url: app.globalData.API_BASE_URL + '/projects/' + encodeURIComponent(projectName) + '?new_name=' + encodeURIComponent(r.content.trim()),
+            method: 'PATCH',
+            success() { wx.showToast({ title: '已改名', icon: 'success' }); self.fetchProjects() },
+            fail() { wx.showToast({ title: '改名失败', icon: 'none' }) }
+          })
+        }
       }
     })
   },
@@ -150,20 +169,16 @@ Page({
     })
   },
 
-  showHistory() {
-    const list = this.data.conversations
-    const self = this
-    wx.showActionSheet({
-      itemList: ['+ 新建对话', ...list.map(c => c.title + (c.id === this.data.conversationId ? ' ✓' : ''))],
-      success(r) {
-        if (r.tapIndex === 0) { self.setData({ conversationId: null, messages: [] }); return }
-        const conv = list[r.tapIndex - 1]
-        self.switchConversation(conv.id)
-      }
-    })
+  toggleHistoryPanel() { this.setData({ showHistoryPanel: !this.data.showHistoryPanel }) },
+
+  newConversation() {
+    this.setData({ conversationId: null, messages: [], showHistoryPanel: false })
   },
 
-  switchConversation(convId) {
+  showHistory() { this.toggleHistoryPanel() },
+  switchConversation(e) {
+    const convId = e.currentTarget.dataset.id
+    if (!convId) return
     const self = this
     wx.request({
       url: app.globalData.API_BASE_URL + '/conversations/' + convId + '?token=' + self.data.token,
@@ -171,7 +186,45 @@ Page({
         if (res.data && res.data.history) {
           const msgs = []
           for (const h of res.data.history) msgs.push({ id: `msg-${Date.now()}`, role: h.role === 'assistant' ? 'ai' : h.role, content: h.content })
-          self.setData({ messages: msgs, conversationId: convId, scrollToId: 'bottom-spacer' })
+          self.setData({ messages: msgs, conversationId: convId, showHistoryPanel: false, scrollToId: 'bottom-spacer' })
+        }
+      }
+    })
+  },
+
+  renameConversation(e) {
+    const id = e.currentTarget.dataset.id
+    const oldTitle = e.currentTarget.dataset.title
+    const self = this
+    wx.showModal({
+      title: '重命名', editable: true, content: oldTitle, placeholderText: '新名称',
+      success(r) {
+        if (r.confirm && r.content) {
+          wx.request({
+            url: app.globalData.API_BASE_URL + '/conversations/' + id + '?token=' + self.data.token,
+            method: 'PATCH', data: { title: r.content.trim() },
+            success() { self.fetchConversations() }
+          })
+        }
+      }
+    })
+  },
+
+  deleteConversation(e) {
+    const id = e.currentTarget.dataset.id
+    const self = this
+    wx.showModal({
+      title: '删除会话', content: '确定删除？', confirmColor: '#ef4444',
+      success(r) {
+        if (r.confirm) {
+          wx.request({
+            url: app.globalData.API_BASE_URL + '/conversations/' + id + '?token=' + self.data.token,
+            method: 'DELETE',
+            success() {
+              if (self.data.conversationId === id) self.setData({ conversationId: null, messages: [] })
+              self.fetchConversations()
+            }
+          })
         }
       }
     })
