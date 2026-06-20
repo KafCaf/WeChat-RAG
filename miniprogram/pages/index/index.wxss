@@ -92,13 +92,13 @@ page { background: #f5f5f5; height: 100%; font-family: -apple-system, sans-serif
 
 /* 历史面板 */
 .history-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; }
-.history-panel { width: 100%; max-height: 70vh; background: #fff; border-radius: 24rpx 24rpx 0 0; display: flex; flex-direction: column; }
+.history-panel { width: 100%; max-height: 70vh; background: #fff; border-radius: 24rpx 24rpx 0 0; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden; }
 .history-header { display: flex; align-items: center; justify-content: space-between; padding: 32rpx 32rpx 20rpx; }
 .history-title { font-size: 34rpx; font-weight: 700; }
 .history-close { font-size: 36rpx; color: #999; padding: 0 8rpx; }
 .history-list { flex: 1; padding: 0 32rpx 32rpx; }
 .history-new { padding: 24rpx 0; font-size: 28rpx; color: #2563eb; font-weight: 500; border-bottom: 1rpx solid #f0f0f0; }
-.history-item { display: flex; align-items: center; justify-content: space-between; padding: 24rpx 0; border-bottom: 1rpx solid #f0f0f0; }
+.history-item { display: flex; align-items: center; justify-content: space-between; padding: 24rpx 0; border-bottom: 1rpx solid #f0f0f0; width: 100%; box-sizing: border-box; }
 .history-active { background: #f0f7ff; margin: 0 -32rpx; padding: 24rpx 32rpx; }
 .history-name { flex: 1; font-size: 28rpx; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history-actions { display: flex; gap: 24rpx; flex-shrink: 0; }
