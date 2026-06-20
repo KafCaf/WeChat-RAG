@@ -53,10 +53,11 @@ page { background: #f5f5f5; height: 100%; font-family: -apple-system, sans-serif
 .welcome-sub { font-size: 26rpx; color: #bbb; margin-top: 12rpx; }
 
 /* 消息 */
-.message-list { flex: 1; padding: 20rpx 24rpx 0; box-sizing: border-box; width: 100%; overflow-x: hidden; }
+.message-list { flex: 1; padding: 32rpx 24rpx 0; box-sizing: border-box; width: 100%; overflow-x: hidden; }
 .message-list.hide { display: none; }
 .list-foot { height: 48rpx; }
 .msg-row { display: flex; margin-bottom: 24rpx; width: 100%; box-sizing: border-box; }
+.msg-row:first-child { margin-top: 16rpx; }
 .msg-row-right { justify-content: flex-end; }
 .msg-body { max-width: 80%; padding: 20rpx 26rpx; border-radius: 20rpx; font-size: 30rpx; line-height: 1.6; word-break: break-all; box-sizing: border-box; }
 .msg-body-ai { background: #fff; color: #333; }
