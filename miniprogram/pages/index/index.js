@@ -194,7 +194,6 @@ Page({
   },
 
   switchConversation(convId) {
-  switchConversation(convId) {
     const self = this
     wx.request({
       url: app.globalData.API_BASE_URL + '/conversations/' + convId + '?token=' + self.data.token,
