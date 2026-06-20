@@ -72,8 +72,8 @@
   <!-- 底部输入栏 -->
   <view class="chat-bar" style="bottom: {{keyboardHeight}}px;">
     <view class="bar-row">
-      <input class="bar-input" value="{{inputValue}}" bindinput="handleInput" bindconfirm="sendMessage"
-        placeholder="输入问题..." confirm-type="send" cursor-spacing="12" adjust-position="{{false}}"/>
+      <textarea class="bar-input" value="{{inputValue}}" bindinput="handleInput"
+        placeholder="输入问题..." cursor-spacing="12" adjust-position="{{false}}" auto-height="true" maxlength="500"/>
       <view class="bar-send {{inputValue && !isLoading ? 'send-active' : ''}}" bindtap="sendMessage">
         <text class="send-icon">↑</text>
       </view>
