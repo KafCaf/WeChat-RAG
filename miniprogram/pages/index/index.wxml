@@ -77,7 +77,7 @@
         <text class="history-close" bindtap="toggleHistoryPanel">✕</text>
       </view>
       <scroll-view class="history-list" scroll-y="true">
-        <view class="history-new" bindtap="newConversation">+ 新建对话</view>
+        <view class="history-new" catchtap="newConversation">+ 新建对话</view>
         <view class="history-item {{item.id === conversationId ? 'history-active' : ''}}" wx:for="{{conversations}}" wx:key="id" bindtap="switchConversation" data-id="{{item.id}}">
           <text class="history-name">{{item.title}}</text>
           <view class="history-actions">
