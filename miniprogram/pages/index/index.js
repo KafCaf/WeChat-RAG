@@ -14,7 +14,9 @@ Page({
     uploadMode: null,
     newProjectName: '',
     keyboardHeight: 0,
-    token: ''
+    token: '',
+    conversations: [],
+    conversationId: null
   },
 
   onLoad() {
@@ -78,12 +80,80 @@ Page({
   onProjectChange(e) {
     const index = e.detail.value
     const name = this.data.projects[index]
-    this.setData({ selectedProjectIndex: index, selectedProjectName: name })
+    this.setData({ selectedProjectIndex: index, selectedProjectName: name, conversationId: null })
     this.setData({
-      messages: [...this.data.messages, {
+      messages: [{
         id: `msg-${Date.now()}`, role: 'system', content: `已切换至：${name}`
       }],
       scrollToId: 'bottom-spacer'
+    })
+    this.fetchConversations()
+  },
+
+  // ---- 会话管理 ----
+  fetchConversations() {
+    const pName = this.data.selectedProjectName
+    if (!this.data.token || pName === '项目列表') return
+    const self = this
+    wx.request({
+      url: app.globalData.API_BASE_URL + '/conversations?token=' + self.data.token + '&project_name=' + encodeURIComponent(pName),
+      success(res) {
+        if (res.data && res.data.conversations) {
+          self.setData({ conversations: res.data.conversations })
+        }
+      }
+    })
+  },
+
+  showHistory() {
+    const list = this.data.conversations
+    if (list.length === 0) { wx.showToast({ title: '暂无历史会话', icon: 'none' }); return }
+    const names = list.map(c => c.title + (c.id === this.data.conversationId ? ' ✓' : ''))
+    const self = this
+    wx.showActionSheet({
+      itemList: names,
+      success(r) {
+        const conv = list[r.tapIndex]
+        self.switchConversation(conv.id)
+      }
+    })
+  },
+
+  switchConversation(convId) {
+    const self = this
+    wx.request({
+      url: app.globalData.API_BASE_URL + '/conversations/' + convId + '?token=' + self.data.token,
+      success(res) {
+        if (res.data && res.data.history) {
+          const msgs = []
+          for (const h of res.data.history) {
+            msgs.push({ id: `msg-${Date.now()}`, role: h.role === 'assistant' ? 'ai' : h.role, content: h.content })
+          }
+          self.setData({ messages: msgs, conversationId: convId, scrollToId: 'bottom-spacer' })
+        }
+      }
+    })
+  },
+
+  deleteConversation(convId) {
+    const self = this
+    wx.showModal({
+      title: '删除会话',
+      content: '确定删除这个会话？',
+      success(r) {
+        if (r.confirm) {
+          wx.request({
+            url: app.globalData.API_BASE_URL + '/conversations/' + convId + '?token=' + self.data.token,
+            method: 'DELETE',
+            success() {
+              if (self.data.conversationId === convId) {
+                self.setData({ conversationId: null, messages: [] })
+              }
+              self.fetchConversations()
+            }
+          })
+        }
+      }
     })
   },
 
@@ -301,7 +371,7 @@ Page({
       method: 'POST',
       timeout: 60000,
       header: { 'content-type': 'application/json' },
-      data: { message: userText, project_name: pName, history: [], top_k: 15, temperature: 0.1, token: self.data.token },
+      data: { message: userText, project_name: pName, history: [], top_k: 15, temperature: 0.1, token: self.data.token, conversation_id: self.data.conversationId },
       success(res) {
         if (res.statusCode === 200 && res.data.answer) {
           const msgs = self.data.messages.filter(m => m.id !== loadingMsgId)
