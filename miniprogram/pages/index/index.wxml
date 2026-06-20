@@ -5,7 +5,7 @@
     <text class="home-sub">选择知识库开始提问</text>
   </view>
   <scroll-view class="home-list" scroll-y="true" enhanced="true" show-scrollbar="{{false}}">
-    <view class="kb-card" wx:for="{{projects}}" wx:key="*this" bindtap="enterProject" data-name="{{item}}">
+    <view class="kb-card" wx:for="{{projects}}" wx:key="*this" bindtap="enterProject" bindlongpress="longPressProject" data-name="{{item}}" hover-class="kb-card-hover">
       <view class="kb-card-info">
         <text class="kb-card-name">{{item}}</text>
         <text class="kb-card-desc">点击进入问答</text>
@@ -81,7 +81,6 @@
     <view class="bar-tools">
       <view class="tool-item" bindtap="startUpload"><text class="tool-label">上传文档</text></view>
       <view class="tool-item" wx:if="{{token}}" bindtap="showHistory"><text class="tool-label">历史</text></view>
-      <view class="tool-item" bindtap="showManageOptions"><text class="tool-label">管理</text></view>
     </view>
   </view>
 </view>

@@ -77,6 +77,65 @@ Page({
     this.setData({ currentProject: '', messages: [], conversations: [], conversationId: null })
   },
 
+  longPressProject(e) {
+    const name = e.currentTarget.dataset.name
+    this._manageProject(name)
+  },
+
+  _manageProject(projectName) {
+    const self = this
+    wx.showActionSheet({
+      itemList: ['查看/删除文档', '删除项目'],
+      success(r) {
+        if (r.tapIndex === 0) { self._showProjectFiles(projectName) }
+        else { self._confirmDeleteProject(projectName) }
+      }
+    })
+  },
+
+  _showProjectFiles(projectName) {
+    const self = this
+    wx.request({
+      url: app.globalData.API_BASE_URL + '/files?project_name=' + encodeURIComponent(projectName),
+      success(res) {
+        if (!res.data || !res.data.files || !res.data.files.length) { wx.showToast({ title: '暂无文档', icon: 'none' }); return }
+        wx.showActionSheet({
+          itemList: res.data.files.map(f => '删除: ' + f),
+          success(r) {
+            const file = res.data.files[r.tapIndex]
+            wx.showModal({
+              title: '确认删除', content: '将删除「' + file + '」', confirmText: '删除', confirmColor: '#ef4444',
+              success(mr) {
+                if (mr.confirm) {
+                  wx.request({
+                    url: app.globalData.API_BASE_URL + '/files?filename=' + encodeURIComponent(file) + '&project_name=' + encodeURIComponent(projectName),
+                    method: 'DELETE',
+                    success() { wx.showToast({ title: '已删除', icon: 'success' }); self.fetchProjects() }
+                  })
+                }
+              }
+            })
+          }
+        })
+      }
+    })
+  },
+
+  _confirmDeleteProject(projectName) {
+    const self = this
+    wx.showModal({
+      title: '删除项目', content: '确定删除「' + projectName + '」？', confirmColor: '#ef4444',
+      success(r) {
+        if (r.confirm) {
+          wx.request({
+            url: app.globalData.API_BASE_URL + '/projects/' + encodeURIComponent(projectName), method: 'DELETE',
+            success() { wx.showToast({ title: '已删除', icon: 'success' }); self.fetchProjects() }
+          })
+        }
+      }
+    })
+  },
+
   homeStartUpload() { this.startUpload() },
 
   // ---- 会话 ----
@@ -198,61 +257,6 @@ Page({
       },
       fail() { wx.showToast({ title: '网络异常', icon: 'none' }) },
       complete() { wx.hideLoading() }
-    })
-  },
-
-  // ---- 管理 ----
-  showManageOptions() {
-    const self = this
-    wx.showActionSheet({
-      itemList: ['查看文档列表', '删除当前知识库'],
-      success(res) {
-        if (res.tapIndex === 0) self.showFileList()
-        else self.confirmDeleteProject()
-      }
-    })
-  },
-
-  showFileList() {
-    const self = this
-    wx.request({
-      url: app.globalData.API_BASE_URL + '/files?project_name=' + encodeURIComponent(this.data.currentProject),
-      success(res) {
-        if (!res.data || !res.data.files || !res.data.files.length) { wx.showToast({ title: '暂无文档', icon: 'none' }); return }
-        wx.showActionSheet({
-          itemList: res.data.files.map(f => '删除: ' + f),
-          success(r) {
-            const file = res.data.files[r.tapIndex]
-            wx.showModal({
-              title: '确认删除', content: '将删除「' + file + '」', confirmText: '删除', confirmColor: '#ef4444',
-              success(mr) {
-                if (mr.confirm) {
-                  wx.request({
-                    url: app.globalData.API_BASE_URL + '/files?filename=' + encodeURIComponent(file) + '&project_name=' + encodeURIComponent(self.data.currentProject),
-                    method: 'DELETE',
-                    success() { wx.showToast({ title: '已删除', icon: 'success' }); self.fetchProjects() }
-                  })
-                }
-              }
-            })
-          }
-        })
-      }
-    })
-  },
-
-  confirmDeleteProject() {
-    const self = this
-    wx.showModal({
-      title: '删除知识库', content: '确定删除「' + this.data.currentProject + '」？', confirmColor: '#ef4444',
-      success(res) {
-        if (res.confirm) {
-          wx.request({
-            url: app.globalData.API_BASE_URL + '/projects/' + encodeURIComponent(self.data.currentProject), method: 'DELETE',
-            success() { wx.showToast({ title: '已删除', icon: 'success' }); self.setData({ currentProject: '', messages: [] }); self.fetchProjects() }
-          })
-        }
-      }
     })
   },
 
