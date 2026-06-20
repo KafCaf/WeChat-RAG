@@ -81,6 +81,7 @@
     <view class="bar-tools">
       <view class="tool-item" bindtap="startUpload"><text class="tool-label">上传文档</text></view>
       <view class="tool-item" wx:if="{{token}}" bindtap="showHistory"><text class="tool-label">对话历史</text></view>
+      <view class="tool-item" wx:if="{{token && conversations.length > 0}}" bindtap="manageConversations"><text class="tool-label">管理对话</text></view>
     </view>
   </view>
 </view>

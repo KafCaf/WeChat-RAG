@@ -89,10 +89,11 @@ Page({
   _manageProject(projectName) {
     const self = this
     wx.showActionSheet({
-      itemList: ['重命名项目', '查看/删除文档', '删除项目'],
+      itemList: ['重命名项目', '管理项目对话', '查看/删除文档', '删除项目'],
       success(r) {
         if (r.tapIndex === 0) { self._renameProject(projectName) }
-        else if (r.tapIndex === 1) { self._showProjectFiles(projectName) }
+        else if (r.tapIndex === 1) { self._manageProjectConversations(projectName) }
+        else if (r.tapIndex === 2) { self._showProjectFiles(projectName) }
         else { self._confirmDeleteProject(projectName) }
       }
     })
@@ -161,6 +162,66 @@ Page({
             success() { wx.showToast({ title: '已删除', icon: 'success' }); self.fetchProjects() }
           })
         }
+      }
+    })
+  },
+
+  manageConversations() { this._manageConversationList(this.data.conversations) },
+
+  _manageProjectConversations(projectName) {
+    const self = this
+    wx.request({
+      url: app.globalData.API_BASE_URL + '/conversations?token=' + self.data.token + '&project_name=' + encodeURIComponent(projectName),
+      success(res) {
+        if (res.data && res.data.conversations && res.data.conversations.length > 0) {
+          self._manageConversationList(res.data.conversations)
+        } else { wx.showToast({ title: '该项目暂无对话', icon: 'none' }) }
+      }
+    })
+  },
+
+  _manageConversationList(list) {
+    const self = this
+    wx.showActionSheet({
+      itemList: list.map(c => c.title),
+      success(r) {
+        const conv = list[r.tapIndex]
+        wx.showActionSheet({
+          itemList: ['删除', '改名'],
+          success(r2) {
+            if (r2.tapIndex === 0) {
+              wx.showModal({
+                title: '删除对话', content: '确定删除「' + conv.title + '」？', confirmColor: '#ef4444',
+                success(mr) {
+                  if (mr.confirm) {
+                    wx.request({
+                      url: app.globalData.API_BASE_URL + '/conversations/' + conv.id + '?token=' + self.data.token,
+                      method: 'DELETE',
+                      success() {
+                        wx.showToast({ title: '已删除', icon: 'success' })
+                        if (self.data.conversationId === conv.id) self.setData({ conversationId: null, messages: [] })
+                        self.fetchConversations()
+                      }
+                    })
+                  }
+                }
+              })
+            } else {
+              wx.showModal({
+                title: '改名', editable: true, content: conv.title, placeholderText: '新名称',
+                success(mr) {
+                  if (mr.confirm && mr.content) {
+                    wx.request({
+                      url: app.globalData.API_BASE_URL + '/conversations/' + conv.id + '?token=' + self.data.token,
+                      method: 'PATCH', data: { title: mr.content.trim() },
+                      success() { wx.showToast({ title: '已改名', icon: 'success' }); self.fetchConversations() }
+                    })
+                  }
+                }
+              })
+            }
+          }
+        })
       }
     })
   },
