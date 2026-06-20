@@ -14,8 +14,7 @@ Page({
     keyboardHeight: 0,
     token: '',
     conversations: [],
-    conversationId: null,
-    darkMode: false
+    conversationId: null
   },
 
   onLoad() {
@@ -28,24 +27,7 @@ Page({
     })
     const self = this
     wx.onKeyboardHeightChange(res => { self.setData({ keyboardHeight: res.height }) })
-    this.initDarkMode()
     this.wxLogin()
-  },
-
-  initDarkMode() {
-    const saved = wx.getStorageSync('dark_mode')
-    if (saved !== '') {
-      this.setData({ darkMode: saved === '1' })
-    } else {
-      const sys = wx.getSystemInfoSync()
-      this.setData({ darkMode: sys.theme === 'dark' })
-    }
-  },
-
-  toggleDarkMode() {
-    const next = !this.data.darkMode
-    this.setData({ darkMode: next })
-    wx.setStorageSync('dark_mode', next ? '1' : '0')
   },
 
   // ---- 微信登录 ----

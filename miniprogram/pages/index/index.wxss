@@ -23,7 +23,6 @@ page { background: #f5f5f5; height: 100%; font-family: -apple-system, sans-serif
   border-top: 1rpx solid #eee; background: #fff; padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
   display: flex; justify-content: center;
 }
-.home-bar .tool-row { display: flex; gap: 16rpx; align-items: center; }
 .home-bar .tool-item { padding: 16rpx 48rpx; background: #2563eb; border-radius: 40rpx; }
 .home-bar .tool-item:active { background: #1d4ed8; }
 .home-bar .tool-label { color: #fff; font-size: 28rpx; font-weight: 500; }
@@ -82,7 +81,7 @@ page { background: #f5f5f5; height: 100%; font-family: -apple-system, sans-serif
   transition: bottom 0.25s ease-out;
 }
 .bar-row { display: flex; align-items: center; gap: 16rpx; }
-.bar-input { flex: 1; min-height: 72rpx; max-height: 180rpx; background: #f3f4f6; border-radius: 36rpx; padding: 10rpx 28rpx; font-size: 28rpx; }
+.bar-input { flex: 1; height: 72rpx; background: #f3f4f6; border-radius: 36rpx; padding: 0 28rpx; font-size: 28rpx; }
 .bar-send { width: 68rpx; height: 68rpx; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; }
 .send-active { background: #2563eb; }
 .send-icon { font-size: 32rpx; color: #9ca3af; font-weight: 700; }
@@ -91,23 +90,3 @@ page { background: #f5f5f5; height: 100%; font-family: -apple-system, sans-serif
 .tool-item { padding: 10rpx 22rpx; background: #f3f4f6; border-radius: 20rpx; }
 .tool-item:active { background: #e5e7eb; }
 .tool-label { font-size: 24rpx; color: #6b7280; }
-
-/* ========== 深色模式 ========== */
-.dark { --bg: #1a1a1a; --surface: #2c2c2c; --text: #e5e5e5; --text-secondary: #999; --border: #333; --input-bg: #333; --blue: #3b82f6; }
-.dark .home-page, .dark .chat-page { background: var(--bg); }
-.dark .home-header .home-title, .dark .welcome-title { color: var(--text); }
-.dark .home-sub, .dark .welcome-sub { color: var(--text-secondary); }
-.dark .kb-card { background: var(--surface); }
-.dark .kb-card-name { color: var(--text); }
-.dark .chat-nav { background: rgba(26,26,26,0.92); border-bottom-color: var(--border); }
-.dark .chat-nav-title { color: var(--text); }
-.dark .msg-body-ai { background: var(--surface); color: var(--text); }
-.dark .msg-body-user { background: var(--blue); }
-.dark .bar-input { background: var(--input-bg); color: var(--text); }
-.dark .chat-bar { background: rgba(26,26,26,0.95); border-top-color: var(--border); }
-.dark .tool-item { background: var(--input-bg); }
-.dark .tool-label { color: var(--text-secondary); }
-.dark .bar-send { background: var(--input-bg); }
-.dark .sys-text { color: var(--text-secondary); }
-.dark .home-bar { background: var(--surface); border-top-color: var(--border); }
-.dark .home-footer-text { color: var(--text-secondary); }
