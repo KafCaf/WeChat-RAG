@@ -80,13 +80,7 @@ Page({
   onProjectChange(e) {
     const index = e.detail.value
     const name = this.data.projects[index]
-    this.setData({ selectedProjectIndex: index, selectedProjectName: name, conversationId: null })
-    this.setData({
-      messages: [{
-        id: `msg-${Date.now()}`, role: 'system', content: `已切换至：${name}`
-      }],
-      scrollToId: 'bottom-spacer'
-    })
+    this.setData({ selectedProjectIndex: index, selectedProjectName: name, conversationId: null, messages: [] })
     this.fetchConversations()
   },
 
@@ -107,13 +101,15 @@ Page({
 
   showHistory() {
     const list = this.data.conversations
-    if (list.length === 0) { wx.showToast({ title: '暂无历史会话', icon: 'none' }); return }
-    const names = list.map(c => c.title + (c.id === this.data.conversationId ? ' ✓' : ''))
     const self = this
     wx.showActionSheet({
-      itemList: names,
+      itemList: ['+ 新建对话', ...list.map(c => c.title + (c.id === this.data.conversationId ? ' ✓' : ''))],
       success(r) {
-        const conv = list[r.tapIndex]
+        if (r.tapIndex === 0) {
+          self.setData({ conversationId: null, messages: [] })
+          return
+        }
+        const conv = list[r.tapIndex - 1]
         self.switchConversation(conv.id)
       }
     })
@@ -375,10 +371,15 @@ Page({
       success(res) {
         if (res.statusCode === 200 && res.data.answer) {
           const msgs = self.data.messages.filter(m => m.id !== loadingMsgId)
-          self.setData({
+          const update = {
             messages: [...msgs, { id: `msg-${Date.now()}`, role: 'ai', content: res.data.answer }],
             scrollToId: 'bottom-spacer'
-          })
+          }
+          if (res.data.conversation_id && res.data.conversation_id !== self.data.conversationId) {
+            update.conversationId = res.data.conversation_id
+            self.fetchConversations()
+          }
+          self.setData(update)
         } else {
           self.setData({ messages: self.data.messages.filter(m => m.id !== loadingMsgId) })
           wx.showToast({ title: '后端处理异常', icon: 'none' })
