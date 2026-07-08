@@ -310,22 +310,31 @@ Page({
   },
 
   _pickFile(mode, newProjectName) {
-    wx.chooseMessageFile({
-      count: 1, type: 'file', extension: ['.pdf', '.doc', '.docx', '.txt', '.md'],
-      success: (res) => {
-        const file = res.tempFiles[0]
-        if (file.size > 20*1024*1024) { wx.showToast({ title: '文件不超过 20MB', icon: 'none' }); return }
-        const originName = file.name
-        wx.showModal({
-          title: '文档命名', editable: true, content: originName, placeholderText: originName,
-          success(mr) {
-            let finalName = (mr.confirm && mr.content) ? mr.content.trim() : originName
-            // 自动保留原始文件后缀
-            const ext = originName.slice(originName.lastIndexOf('.'))
-            if (!finalName.endsWith(ext)) finalName += ext
-            file.customName = finalName
-            if (newProjectName) self.setData({ newProjectName: newProjectName })
-            self.uploadToServer(file, mode, newProjectName)
+    const self = this
+    wx.showModal({
+      title: '选择文件',
+      content: '请先将文档发送到微信"文件传输助手"，然后从聊天记录中选择文件。',
+      confirmText: '去选择',
+      cancelText: '取消',
+      success(r) {
+        if (!r.confirm) return
+        wx.chooseMessageFile({
+          count: 1, type: 'file', extension: ['.pdf', '.doc', '.docx', '.txt', '.md'],
+          success: (res) => {
+            const file = res.tempFiles[0]
+            if (file.size > 20*1024*1024) { wx.showToast({ title: '文件不超过 20MB', icon: 'none' }); return }
+            const originName = file.name
+            wx.showModal({
+              title: '文档命名', editable: true, content: originName, placeholderText: originName,
+              success(mr) {
+                let finalName = (mr.confirm && mr.content) ? mr.content.trim() : originName
+                const ext = originName.slice(originName.lastIndexOf('.'))
+                if (!finalName.endsWith(ext)) finalName += ext
+                file.customName = finalName
+                if (newProjectName) self.setData({ newProjectName: newProjectName })
+                self.uploadToServer(file, mode, newProjectName)
+              }
+            })
           }
         })
       }
