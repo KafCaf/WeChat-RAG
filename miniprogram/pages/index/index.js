@@ -319,9 +319,14 @@ Page({
       success(r) {
         if (!r.confirm) return
         wx.chooseMessageFile({
-          count: 1, type: 'file', extension: ['.pdf', '.doc', '.docx', '.txt', '.md'],
+          count: 1, type: 'file',
           success: (res) => {
             const file = res.tempFiles[0]
+            const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase()
+            if (['.pdf','.doc','.docx','.txt','.md'].indexOf(ext) === -1) {
+              wx.showToast({ title: '不支持的文件类型，仅限 pdf/doc/docx/txt/md', icon: 'none', duration: 3000 })
+              return
+            }
             if (file.size > 20*1024*1024) { wx.showToast({ title: '文件不超过 20MB', icon: 'none' }); return }
             const originName = file.name
             wx.showModal({
