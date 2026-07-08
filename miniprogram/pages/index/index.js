@@ -59,11 +59,17 @@ Page({
   fetchProjects() {
     wx.request({
       url: app.globalData.API_BASE_URL + '/projects',
+      timeout: 15000,
       success: (res) => {
         if (res.data && res.data.status === 'success') {
           const list = res.data.projects.filter(p => p !== '全部项目 (全局搜索)')
           this.setData({ projects: list })
+        } else {
+          wx.showToast({ title: '数据异常: ' + JSON.stringify(res.data).substring(0, 30), icon: 'none' })
         }
+      },
+      fail: (err) => {
+        wx.showToast({ title: '网络错误: ' + (err.errMsg || 'unknown').substring(0, 30), icon: 'none', duration: 5000 })
       }
     })
   },
