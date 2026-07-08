@@ -693,6 +693,15 @@ async def rename_project(project_name: str, new_name: str = ""):
     if os.path.exists(new_path):
         raise HTTPException(status_code=400, detail="新名称已存在")
     os.rename(old_path, new_path)
+    # 同步更新 ES 中的项目名
+    try:
+        body = {
+            "script": {"source": "ctx._source.project_name = params.new_name", "params": {"new_name": new_name}},
+            "query": {"term": {"project_name": project_name}}
+        }
+        es_client.update_by_query(index=CURRENT_INDEX, body=body)
+    except Exception as e:
+        print(f"[改名] ES 更新失败: {e}")
     return {"status": "success", "message": f"项目已改名为 {new_name}"}
 
 @app.delete("/projects/{project_name}")
