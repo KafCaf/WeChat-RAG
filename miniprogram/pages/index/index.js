@@ -5,6 +5,7 @@ Page({
     scrollToId: '',
     lastMsgId: '',
     scrollAnchor: 'msg-end',
+    msgScrollTop: 0,
     isLoading: false,
     messages: [],
     projects: [],
@@ -86,14 +87,7 @@ Page({
   },
 
   scrollToBottom() {
-    const query = wx.createSelectorQuery()
-    query.select('.message-list').boundingClientRect()
-    query.exec(res => {
-      if (res[0]) {
-        const list = wx.createSelectorQuery()
-        list.select('.message-list').node(res => { res[0].node.scrollTop = 99999 }).exec()
-      }
-    })
+    this.setData({ msgScrollTop: this.data.msgScrollTop + 99999 })
   },
 
   goHome() {

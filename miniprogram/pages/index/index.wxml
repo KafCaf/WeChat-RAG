@@ -42,8 +42,11 @@
       <text class="welcome-title">{{currentProject}}</text>
       <text class="welcome-sub">输入问题开始对话</text>
     </view>
-    <view 
+    <scroll-view 
       class="message-list {{messages.length > 0 ? '' : 'hide'}}"
+      scroll-y="true"
+      scroll-top="{{msgScrollTop}}"
+      show-scrollbar="{{false}}"
     >
       <block wx:for="{{messages}}" wx:key="id">
         <block wx:if="{{item.role === 'system'}}">
@@ -60,8 +63,8 @@
           </view>
         </block>
       </block>
-      <view style="height: 160rpx;"></view>
-    </view>
+      <view style="height: 180rpx;"></view>
+    </scroll-view>
   </view>
 
   <!-- 底部输入栏 -->
