@@ -11,7 +11,7 @@ class VectorRetrieval(BaseRetrieval):
             index = index,
             ids = doc_ids
         )
-        return [hit["_source"]["content"] for hit in response["docs"]]
+        return [hit["_source"] for hit in response["docs"]]
     
     def calculate_rrf(self, bm25_results, vector_results, k=10):
         all_docs = {}
@@ -167,19 +167,19 @@ class VectorRetrieval(BaseRetrieval):
         sorted_doc_ids = [doc_id for doc_id, result in final_sorted_docs][:20]
         docs = self.get_documents_with_ids(sorted_doc_ids, index_name)
         
-        # 🌟 使用云端 Reranker 替代 ColBERT 精排
+        # 🔧 提取纯文本给精排模型用，保留完整 dict 返给 API
+        doc_texts = [d.get('content', str(d)) if isinstance(d, dict) else str(d) for d in docs]
         try:
             from server.reranker import cloud_rerank
-            rerank_results = cloud_rerank(query, docs, top_n=top_k2)
+            rerank_results = cloud_rerank(query, doc_texts, top_n=top_k2)
             sorted_docs = [docs[idx] for idx, _ in rerank_results]
             sorted_scores = [score for _, score in rerank_results]
         except Exception:
-            # 降级：使用 ColBERT（云端模型可能返回 0）
             output_1 = self.embed_model.encode([query], return_dense=False, return_sparse=False, return_colbert_vecs=True)
-            output_2 = self.embed_model.encode(docs, return_dense=False, return_sparse=False, return_colbert_vecs=True)
+            output_2 = self.embed_model.encode(doc_texts, return_dense=False, return_sparse=False, return_colbert_vecs=True)
             
             colbert_scores = []
-            for i in range(len(docs)):
+            for i in range(len(doc_texts)):
                 colbert_score = float(self.embed_model.colbert_score(output_1['colbert_vecs'][0], output_2['colbert_vecs'][i]))
                 colbert_scores.append(colbert_score)
             zipped = list(zip(docs, colbert_scores))
