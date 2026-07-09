@@ -45,7 +45,7 @@
     <scroll-view 
       class="message-list {{messages.length > 0 ? '' : 'hide'}}"
       scroll-y="true" 
-      scroll-top="{{scrollTop}}"
+      scroll-into-view="{{lastMsgId}}"
       scroll-with-animation="{{false}}"
       enhanced="true"
       show-scrollbar="{{false}}"
@@ -65,7 +65,7 @@
           </view>
         </block>
       </block>
-      <view class="list-foot" id="bottom-spacer"></view>
+      <view id="msg-end" style="height: 32rpx;"></view>
     </scroll-view>
   </view>
 

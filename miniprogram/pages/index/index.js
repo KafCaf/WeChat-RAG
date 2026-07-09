@@ -3,7 +3,7 @@ Page({
   data: {
     inputValue: '',
     scrollToId: '',
-    scrollTop: 0,
+    lastMsgId: '',
     isLoading: false,
     messages: [],
     projects: [],
@@ -269,7 +269,7 @@ Page({
         if (res.data && res.data.history) {
           const msgs = []
           for (const h of res.data.history) msgs.push({ id: `msg-${Date.now()}`, role: h.role === 'assistant' ? 'ai' : h.role, content: h.content })
-          self.setData({ messages: msgs, conversationId: convId, scrollTop: 99999 })
+          self.setData({ messages: msgs, conversationId: convId, lastMsgId: `msg-end` })
         }
       }
     })
@@ -381,7 +381,7 @@ Page({
     const loading = { id: 'msg-loading', role: 'ai', isLoadingBubble: true }
     this.setData({
       messages: [...this.data.messages, { id: `msg-${Date.now()}`, role: 'user', content: text }, loading],
-      inputValue: '', scrollTop: 99999, isLoading: true
+      inputValue: '', lastMsgId: `msg-end`, isLoading: true
     })
     this.fetchAiResponse(text, 'msg-loading')
   },
@@ -397,7 +397,7 @@ Page({
       success(res) {
         if (res.statusCode === 200 && res.data.answer) {
           const msgs = self.data.messages.filter(m => m.id !== loadingMsgId)
-          const update = { messages: [...msgs, { id: `msg-${Date.now()}`, role: 'ai', content: res.data.answer }], scrollTop: 99999 }
+          const update = { messages: [...msgs, { id: `msg-${Date.now()}`, role: 'ai', content: res.data.answer }], lastMsgId: `msg-end` }
           if (res.data.conversation_id && res.data.conversation_id !== self.data.conversationId) {
             update.conversationId = res.data.conversation_id
             self.fetchConversations()
