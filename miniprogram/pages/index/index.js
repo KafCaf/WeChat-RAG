@@ -87,7 +87,19 @@ Page({
   },
 
   scrollToBottom() {
-    this.setData({ msgScrollTop: 99999 })
+    this.setData({ msgScrollTop: Date.now() })
+  },
+
+  showTopMenu() {
+    const self = this
+    wx.showActionSheet({
+      itemList: ['上传文档', '对话历史', '管理对话'],
+      success(r) {
+        if (r.tapIndex === 0) self.startUpload()
+        else if (r.tapIndex === 1) self.showHistory()
+        else self.manageConversations()
+      }
+    })
   },
 
   goHome() {
