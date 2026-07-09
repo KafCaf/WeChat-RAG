@@ -2,7 +2,7 @@
   "setting": {
     "es6": true,
     "postcss": true,
-    "minified": false,
+    "minified": true,
     "uglifyFileName": false,
     "enhance": true,
     "packNpmRelationList": [],
