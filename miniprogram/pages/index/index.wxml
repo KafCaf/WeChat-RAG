@@ -28,12 +28,10 @@
   <!-- 顶栏 -->
   <view class="chat-nav" style="padding-top: {{statusBarHeight + 6}}px;">
     <view class="chat-nav-row" style="padding-right: {{menuButtonRight}}px;">
-      <view class="chat-nav-back">
-        <view class="back-arrow" bindtap="goHome">‹</view>
-        <view class="chat-nav-title-area" bindtap="showTopMenu">
-          <text class="chat-nav-title">{{currentProject}}</text>
-          <text class="nav-down">▼</text>
-        </view>
+      <text class="back-arrow" bindtap="goHome">‹</text>
+      <view class="chat-nav-title-area" bindtap="showTopMenu">
+        <text class="chat-nav-title">{{currentProject}}</text>
+        <text class="nav-down">▼</text>
       </view>
     </view>
   </view>
