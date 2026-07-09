@@ -179,7 +179,9 @@ async def chat_and_rag(request: ChatRequest):
         if docs:
             for doc in docs:
                 content = doc.get('content') or doc.get('page_content') or doc.get('text') or str(doc) if isinstance(doc, dict) else str(doc)
-                context_list.append(content)
+                filename = doc.get('filename', '') if isinstance(doc, dict) else ''
+                source_name = os.path.basename(filename) if filename else '未知文档'
+                context_list.append(f"【来源文档：{source_name}】\n{content}")
             context = "\n---\n".join(context_list)
         else:
             context = "未能在知识库中找到相关背景知识。"
@@ -199,6 +201,7 @@ async def chat_and_rag(request: ChatRequest):
 - 直接问答：一句话结论。
 - 摘要/概括：编号列表，覆盖背景知识中所有相关方面。
 - 新旧对比：先结论，再分别简述旧版和新版要求。不标注条款号（如第五条、第十三条等）。
+- 若多个来源文档均有相关内容，回答末尾注明来源文档。
 - 禁止：以"根据背景知识""以下是"开头、长篇引用。
 
 【背景知识】:
