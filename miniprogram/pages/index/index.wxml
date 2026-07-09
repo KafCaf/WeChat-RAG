@@ -42,30 +42,26 @@
       <text class="welcome-title">{{currentProject}}</text>
       <text class="welcome-sub">输入问题开始对话</text>
     </view>
-    <scroll-view 
+    <view 
       class="message-list {{messages.length > 0 ? '' : 'hide'}}"
-      style="height: calc(100vh - {{navBarHeight}}px - 180rpx);"
-      scroll-y="true" 
-      scroll-into-view="{{scrollAnchor}}"
-      show-scrollbar="{{false}}"
     >
       <block wx:for="{{messages}}" wx:key="id">
         <block wx:if="{{item.role === 'system'}}">
-          <view class="sys-msg" id="{{item.id}}"><text class="sys-text">{{item.content}}</text></view>
+          <view class="sys-msg"><text class="sys-text">{{item.content}}</text></view>
         </block>
         <block wx:else>
-          <view class="msg-row {{item.role === 'user' ? 'msg-row-right' : ''}}" id="{{item.id}}">
+          <view class="msg-row {{item.role === 'user' ? 'msg-row-right' : ''}}">
             <view class="msg-body {{item.role === 'user' ? 'msg-body-user' : 'msg-body-ai'}}">
               <view wx:if="{{item.isLoadingBubble}}" class="typing">
                 <view class="typing-dot"></view><view class="typing-dot"></view><view class="typing-dot"></view>
               </view>
-              <text wx:else class="msg-text" user-select="true">{{item.content}}</text>
+              <view wx:else class="msg-text" selectable="true">{{item.content}}</view>
             </view>
           </view>
         </block>
       </block>
-      <view id="msg-end" style="height: 32rpx;"></view>
-    </scroll-view>
+      <view style="height: 160rpx;"></view>
+    </view>
   </view>
 
   <!-- 底部输入栏 -->

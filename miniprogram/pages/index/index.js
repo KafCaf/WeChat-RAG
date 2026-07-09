@@ -85,6 +85,17 @@ Page({
     }, 100)
   },
 
+  scrollToBottom() {
+    const query = wx.createSelectorQuery()
+    query.select('.message-list').boundingClientRect()
+    query.exec(res => {
+      if (res[0]) {
+        const list = wx.createSelectorQuery()
+        list.select('.message-list').node(res => { res[0].node.scrollTop = 99999 }).exec()
+      }
+    })
+  },
+
   goHome() {
     this.setData({ currentProject: '', messages: [], conversations: [], conversationId: null })
   },
@@ -270,7 +281,7 @@ Page({
         if (res.data && res.data.history) {
           const msgs = []
           for (const h of res.data.history) msgs.push({ id: `msg-${Date.now()}`, role: h.role === 'assistant' ? 'ai' : h.role, content: h.content })
-          self.setData({ messages: msgs, conversationId: convId, lastMsgId: `msg-end` })
+          self.setData({ messages: msgs, conversationId: convId })
         }
       }
     })
@@ -382,8 +393,9 @@ Page({
     const loading = { id: 'msg-loading', role: 'ai', isLoadingBubble: true }
     this.setData({
       messages: [...this.data.messages, { id: `msg-${Date.now()}`, role: 'user', content: text }, loading],
-      inputValue: '', lastMsgId: `msg-end`, isLoading: true
+      inputValue: '', isLoading: true
     })
+    this.scrollToBottom()
     this.fetchAiResponse(text, 'msg-loading')
   },
 
@@ -398,12 +410,13 @@ Page({
       success(res) {
         if (res.statusCode === 200 && res.data.answer) {
           const msgs = self.data.messages.filter(m => m.id !== loadingMsgId)
-          const update = { messages: [...msgs, { id: `msg-${Date.now()}`, role: 'ai', content: res.data.answer }], lastMsgId: `msg-end` }
+          const update = { messages: [...msgs, { id: `msg-${Date.now()}`, role: 'ai', content: res.data.answer }] }
           if (res.data.conversation_id && res.data.conversation_id !== self.data.conversationId) {
             update.conversationId = res.data.conversation_id
             self.fetchConversations()
           }
           self.setData(update)
+          self.scrollToBottom()
         } else {
           self.setData({ messages: self.data.messages.filter(m => m.id !== loadingMsgId) })
           wx.showToast({ title: '后端异常', icon: 'none' })
