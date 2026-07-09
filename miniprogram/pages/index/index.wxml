@@ -45,8 +45,8 @@
     <scroll-view 
       class="message-list {{messages.length > 0 ? '' : 'hide'}}"
       scroll-y="true" 
-      scroll-into-view="{{scrollToId}}"
-      scroll-with-animation="true"
+      scroll-top="{{scrollTop}}"
+      scroll-with-animation="{{false}}"
       enhanced="true"
       show-scrollbar="{{false}}"
     >
