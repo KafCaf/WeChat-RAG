@@ -4,6 +4,7 @@ Page({
     inputValue: '',
     scrollToId: '',
     lastMsgId: '',
+    scrollAnchor: 'msg-end',
     isLoading: false,
     messages: [],
     projects: [],
