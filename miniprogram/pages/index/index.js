@@ -87,7 +87,7 @@ Page({
   },
 
   scrollToBottom() {
-    this.setData({ msgScrollTop: this.data.msgScrollTop + 99999 })
+    this.setData({ msgScrollTop: 99999 })
   },
 
   goHome() {
