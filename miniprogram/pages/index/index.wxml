@@ -33,7 +33,7 @@
         <text class="chat-nav-title">{{currentProject}}</text>
         <text class="nav-down">▼</text>
       </view>
-      <view class="nav-left" style="width: {{menuButtonRight}}px;"><text class="back-arrow" bindtap="goHome">‹</text></view>
+      <view style="width: {{menuButtonRight}}px;"></view>
     </view>
   </view>
 
