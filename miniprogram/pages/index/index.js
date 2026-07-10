@@ -76,8 +76,6 @@ Page({
     })
   },
 
-  enterProject(e) {
-
   showMenu() {
     const self = this
     wx.showActionSheet({
@@ -89,6 +87,8 @@ Page({
       }
     })
   },
+
+  enterProject(e) {
     const name = e.currentTarget.dataset.name
     const self = this
     setTimeout(() => {
