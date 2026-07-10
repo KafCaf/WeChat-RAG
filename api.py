@@ -348,7 +348,7 @@ async def upload_document(
         chunks["project_name"] = project_name 
         chunks["file_hash"] = file_md5
         # 用用户上传的原始文件名替换磁盘路径
-        chunks["filename"] = file.filename
+        chunks["filename"] = save_name
         
         # --- 6. 热更新处理：清理旧版本切片 ---
         # 如果走到这里，说明内容不一样，但可能文件名一样（用户修改后重新上传）
