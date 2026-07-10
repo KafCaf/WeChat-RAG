@@ -223,12 +223,13 @@ class VectorRetrieval(BaseRetrieval):
         """按文件名（支持前后缀通配）删除 ES 切片"""
         if not self.es.indices.exists(index=index_name):
             return
+        basename = filename.split('/').pop() if '/' in filename else filename
         query_body = {
             "query": {
                 "bool": {
                     "must": [
                         {"term": {"project_name": project_name}},
-                        {"wildcard": {"filename": f"*{filename}*"}}
+                        {"match_phrase": {"filename": basename}}
                     ]
                 }
             }
@@ -236,7 +237,7 @@ class VectorRetrieval(BaseRetrieval):
         try:
             response = self.es.delete_by_query(index=index_name, body=query_body, ignore=[400, 404])
             self.es.indices.refresh(index=index_name)
-            print(f"[数据清理] 已清理项目【{project_name}】中含【{filename}】的 {response.get('deleted', 0)} 个切片。")
+            print(f"[数据清理] 已清理项目【{project_name}】中含【{basename}】的 {response.get('deleted', 0)} 个切片。")
         except Exception as e:
             print(f"[数据清理] 清理失败: {e}")
 

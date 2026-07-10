@@ -398,7 +398,14 @@ Page({
       messages: [...this.data.messages, { id: `msg-${Date.now()}`, role: 'user', content: text }, loading],
       inputValue: '', isLoading: true
     })
+    this._scrollMsgToBottom()
     this.fetchAiResponse(text, 'msg-loading')
+  },
+
+  _scrollMsgToBottom() {
+    setTimeout(() => {
+      this.setData({ msgScrollTop: Date.now() })
+    }, 50)
   },
 
   fetchAiResponse(userText, loadingMsgId) {
@@ -418,6 +425,7 @@ Page({
             self.fetchConversations()
           }
           self.setData(update)
+          self._scrollMsgToBottom()
         } else {
           self.setData({ messages: self.data.messages.filter(m => m.id !== loadingMsgId) })
           wx.showToast({ title: '后端异常', icon: 'none' })
