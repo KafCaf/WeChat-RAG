@@ -29,9 +29,8 @@
   <view class="chat-nav" style="padding-top: {{statusBarHeight + 6}}px;">
     <view class="chat-nav-row">
       <view class="nav-left" style="width: {{menuButtonRight}}px;"><text class="back-arrow" bindtap="goHome">‹</text></view>
-      <view class="chat-nav-title-area" bindtap="showTopMenu">
+      <view class="chat-nav-title-area">
         <text class="chat-nav-title">{{currentProject}}</text>
-        <text class="nav-down">▼</text>
       </view>
       <view style="width: {{menuButtonRight}}px;"></view>
     </view>
@@ -43,8 +42,8 @@
       <text class="welcome-title">{{currentProject}}</text>
       <text class="welcome-sub">输入问题开始对话</text>
     </view>
-    <scroll-view 
-      class="message-list {{messages.length > 0 ? '' : 'hide'}}"
+    <view 
+      class="message-list {{messages.length > 0 ? '' : 'hide'}}" style="height: {{msgListHeight}}px;"
       scroll-y="true"
       scroll-top="{{msgScrollTop}}"
       show-scrollbar="{{false}}"
@@ -65,12 +64,15 @@
         </block>
       </block>
       <view style="height: 180rpx;"></view>
-    </scroll-view>
+    </view>
   </view>
 
   <!-- 底部输入栏 -->
   <view class="chat-bar" style="bottom: {{keyboardHeight}}px;">
     <view class="bar-row">
+      <view class="bar-gear" bindtap="showMenu">
+        <text class="gear-icon">⚙</text>
+      </view>
       <textarea class="bar-input" value="{{inputValue}}" bindinput="handleInput"
         placeholder="输入问题..." cursor-spacing="12" adjust-position="{{false}}" auto-height="true" maxlength="500"/>
       <view class="bar-send {{inputValue && !isLoading ? 'send-active' : ''}}" bindtap="sendMessage">

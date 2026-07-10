@@ -2,10 +2,7 @@ const app = getApp()
 Page({
   data: {
     inputValue: '',
-    scrollToId: '',
-    lastMsgId: '',
-    scrollAnchor: 'msg-end',
-    msgScrollTop: 0,
+    msgListHeight: 400,
     isLoading: false,
     messages: [],
     projects: [],
@@ -31,6 +28,8 @@ Page({
     })
     const self = this
     wx.onKeyboardHeightChange(res => { self.setData({ keyboardHeight: res.height }) })
+    const msgH = sysInfo.windowHeight - (sysInfo.statusBarHeight + 44) - 100
+    this.setData({ msgListHeight: msgH })
     this.wxLogin()
   },
 
@@ -78,6 +77,18 @@ Page({
   },
 
   enterProject(e) {
+
+  showMenu() {
+    const self = this
+    wx.showActionSheet({
+      itemList: ["上传文档", "对话历史", "管理对话"],
+      success(r) {
+        if (r.tapIndex === 0) self.startUpload()
+        else if (r.tapIndex === 1) self.showHistory()
+        else self.manageConversations()
+      }
+    })
+  },
     const name = e.currentTarget.dataset.name
     const self = this
     setTimeout(() => {
@@ -86,21 +97,7 @@ Page({
     }, 100)
   },
 
-  scrollToBottom() {
-    this.setData({ msgScrollTop: Date.now() })
-  },
 
-  showTopMenu() {
-    const self = this
-    wx.showActionSheet({
-      itemList: ['上传文档', '对话历史', '管理对话'],
-      success(r) {
-        if (r.tapIndex === 0) self.startUpload()
-        else if (r.tapIndex === 1) self.showHistory()
-        else self.manageConversations()
-      }
-    })
-  },
 
   goHome() {
     this.setData({ currentProject: '', messages: [], conversations: [], conversationId: null })
