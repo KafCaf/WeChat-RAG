@@ -1,4 +1,5 @@
 <!-- ========== 首页：知识库选择 ========== -->
+<wxs module="md" src="/utils/md2nodes.wxs"></wxs>
 <view class="home-page" wx:if="{{!currentProject}}">
   <view class="home-header" style="padding-top: {{statusBarHeight + 20}}px;">
     <text class="home-title">文档问答</text>
@@ -58,7 +59,7 @@
               <view wx:if="{{item.isLoadingBubble}}" class="typing">
                 <view class="typing-dot"></view><view class="typing-dot"></view><view class="typing-dot"></view>
               </view>
-              <view wx:else class="msg-text" selectable="true">{{item.content}}</view>
+              <rich-text wx:else nodes="{{md.parse(item.content)}}"></rich-text>
             </view>
           </view>
         </block>
