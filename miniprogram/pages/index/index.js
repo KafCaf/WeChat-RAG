@@ -398,7 +398,6 @@ Page({
       messages: [...this.data.messages, { id: `msg-${Date.now()}`, role: 'user', content: text }, loading],
       inputValue: '', isLoading: true
     })
-    this.scrollToBottom()
     this.fetchAiResponse(text, 'msg-loading')
   },
 
@@ -419,7 +418,6 @@ Page({
             self.fetchConversations()
           }
           self.setData(update)
-          self.scrollToBottom()
         } else {
           self.setData({ messages: self.data.messages.filter(m => m.id !== loadingMsgId) })
           wx.showToast({ title: '后端异常', icon: 'none' })
