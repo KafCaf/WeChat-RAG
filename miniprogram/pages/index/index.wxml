@@ -33,7 +33,6 @@
         <text class="chat-nav-title">{{currentProject}}</text>
         <text class="nav-down">▼</text>
       </view>
-      <view class="chat-nav-placeholder"></view>
     </view>
   </view>
 
