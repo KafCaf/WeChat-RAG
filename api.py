@@ -306,8 +306,11 @@ async def speech_to_text(file: UploadFile = File(...)):
         
         if resp.status_code == 200:
             result = resp.json()
-            text = result.get("output", {}).get("text", "") or result.get("text", "")
+            # OpenAI 兼容格式: {"text": "..."}
+            text = result.get("text", "") or result.get("output", {}).get("text", "")
+            print(f"[ASR] 识别结果: {text[:100] if text else '(空)'}")
             return {"status": "success", "text": text}
+        print(f"[ASR] HTTP {resp.status_code}: {resp.text[:200]}")
         return {"status": "success", "text": ""}
     except Exception as e:
         print(f"[ASR] 语音识别失败: {e}")
