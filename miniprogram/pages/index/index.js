@@ -13,6 +13,7 @@ Page({
     newProjectName: '',
     keyboardHeight: 0,
     token: '',
+    isRecording: false,
     conversations: [],
     conversationId: null,
     showHistoryPanel: false
@@ -89,8 +90,13 @@ Page({
   },
 
   startRecord() {
+    if (this.data.isRecording) return
+    this.setData({ isRecording: true })
+    wx.showToast({ title: '开始说话...', icon: 'none', duration: 60000 })
     this.recorder = wx.getRecorderManager()
     this.recorder.onStop((res) => {
+      wx.hideToast()
+      this.setData({ isRecording: false })
       if (!res.tempFilePath) return
       const self = this
       wx.showLoading({ title: '识别中...' })
@@ -104,6 +110,11 @@ Page({
         },
         fail() { wx.hideLoading() }
       })
+    })
+    this.recorder.onError(() => {
+      wx.hideToast()
+      this.setData({ isRecording: false })
+      wx.showToast({ title: '录音失败，请重试', icon: 'none' })
     })
     this.recorder.start({ duration: 60000, format: 'mp3' })
   },
