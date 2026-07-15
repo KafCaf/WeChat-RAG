@@ -71,7 +71,10 @@
   <!-- 底部输入栏 -->
   <view class="chat-bar" style="bottom: {{keyboardHeight}}px;">
     <view class="bar-row">
-      <view class="bar-mic {{isRecording ? "recording" : ""}}" bindtap="toggleRecord"><image class="mic-img" src="{{isRecording ? "/images/cancel.png" : "/images/mic.jpeg"}}" mode="aspectFit"></image></view>
+      <view class="bar-mic {{isRecording ? 'recording' : ''}}" bindtap="toggleRecord">
+        <image wx:if="{{isRecording}}" class="mic-img" src="/images/cancel.png" mode="aspectFit"></image>
+        <image wx:else class="mic-img" src="/images/mic.jpeg" mode="aspectFit"></image>
+      </view>
       <view class="bar-gear" bindtap="showMenu">
         <text class="gear-icon">⚙</text>
       </view>
