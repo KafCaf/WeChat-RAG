@@ -71,7 +71,7 @@
   <!-- 底部输入栏 -->
   <view class="chat-bar" style="bottom: {{keyboardHeight}}px;">
     <view class="bar-row">
-      <view class="bar-mic" bindtouchstart="startRecord" bindtouchend="stopRecord"><view class="mic-icon"><view class="mic-head"></view><view class="mic-arc"></view><view class="mic-stem"></view></view></view>
+      <view class="bar-mic" bindtouchstart="startRecord" bindtouchend="stopRecord">🎤</view>
       <view class="bar-gear" bindtap="showMenu">
         <text class="gear-icon">⚙</text>
       </view>
