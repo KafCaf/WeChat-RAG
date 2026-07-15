@@ -298,10 +298,10 @@ async def speech_to_text(file: UploadFile = File(...)):
         
         # 调用百炼语音识别 (fun-asr)
         import requests
-        url = "https://dashscope.aliyuncs.com/api/v1/services/audio/asr/transcription"
+        url = "https://dashscope.aliyuncs.com/compatible-mode/v1/audio/transcriptions"
         headers = {"Authorization": f"Bearer {DASHSCOPE_API_KEY}"}
         with open(tmp_path, "rb") as f:
-            resp = requests.post(url, headers=headers, files={"file": f})
+            resp = requests.post(url, headers=headers, files={"file": f}, data={"model": "qwen3-asr-flash"})
         os.remove(tmp_path)
         
         if resp.status_code == 200:
