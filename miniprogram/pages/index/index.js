@@ -89,10 +89,17 @@ Page({
     })
   },
 
-  startRecord() {
-    if (this.data.isRecording) return
+  toggleRecord() {
+    if (this.data.isRecording) {
+      // 取消：停止录音
+      if (this.recorder) this.recorder.stop()
+      wx.hideToast()
+      this.setData({ isRecording: false })
+      return
+    }
+    // 开始录音
     this.setData({ isRecording: true })
-    wx.showToast({ title: '开始说话...', icon: 'none', duration: 60000 })
+    wx.showToast({ title: '正在聆听...', icon: 'none', duration: 60000 })
     this.recorder = wx.getRecorderManager()
     this.recorder.onStop((res) => {
       wx.hideToast()
@@ -114,13 +121,9 @@ Page({
     this.recorder.onError(() => {
       wx.hideToast()
       this.setData({ isRecording: false })
-      wx.showToast({ title: '录音失败，请重试', icon: 'none' })
+      wx.showToast({ title: '录音失败', icon: 'none' })
     })
     this.recorder.start({ duration: 60000, format: 'mp3' })
-  },
-
-  stopRecord() {
-    if (this.recorder) this.recorder.stop()
   },
 
   enterProject(e) {
