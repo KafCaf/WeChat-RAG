@@ -76,7 +76,7 @@
         <image wx:else class="mic-img" src="/images/mic.jpeg" mode="aspectFit"></image>
       </view>
       <view class="bar-gear" bindtap="showMenu">
-        <text class="gear-icon">⚙</text>
+        <image class="gear-img" src="/images/settings.png" mode="aspectFit"></image>
       </view>
       <textarea class="bar-input" value="{{inputValue}}" bindinput="handleInput"
         placeholder="输入问题..." cursor-spacing="12" adjust-position="{{false}}" auto-height="true" maxlength="500"/>
