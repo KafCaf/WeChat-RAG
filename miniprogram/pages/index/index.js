@@ -28,7 +28,9 @@ Page({
       menuButtonRight: sysInfo.windowWidth - menuBtn.left + 12
     })
     const self = this
-    wx.onKeyboardHeightChange(res => { self.setData({ keyboardHeight: res.height }) })
+    wx.onKeyboardHeightChange(res => {
+      self.setData({ keyboardHeight: res.height, keyboardVisible: res.height > 0 })
+    })
     const msgH = sysInfo.windowHeight - (sysInfo.statusBarHeight + 44) - 100
     this.setData({ msgListHeight: msgH })
     this.wxLogin()
