@@ -284,6 +284,35 @@ async def chat_and_rag(request: ChatRequest):
         print(f"RAG 流水线内部异常:\n{error_details}")
         raise HTTPException(status_code=500, detail="系统内部流转或外部网络异常。")
 
+# ==================== 语音识别 ====================
+
+@app.post("/speech-to-text")
+async def speech_to_text(file: UploadFile = File(...)):
+    """上传音频文件，调用百炼 ASR 返回文字"""
+    try:
+        audio_bytes = await file.read()
+        # 保存临时文件
+        tmp_path = f"/tmp/{file.filename}"
+        with open(tmp_path, "wb") as f:
+            f.write(audio_bytes)
+        
+        # 调用百炼语音识别 (fun-asr)
+        import requests
+        url = "https://dashscope.aliyuncs.com/api/v1/services/audio/asr/transcription"
+        headers = {"Authorization": f"Bearer {DASHSCOPE_API_KEY}"}
+        with open(tmp_path, "rb") as f:
+            resp = requests.post(url, headers=headers, files={"file": f})
+        os.remove(tmp_path)
+        
+        if resp.status_code == 200:
+            result = resp.json()
+            text = result.get("output", {}).get("text", "") or result.get("text", "")
+            return {"status": "success", "text": text}
+        return {"status": "success", "text": ""}
+    except Exception as e:
+        print(f"[ASR] 语音识别失败: {e}")
+        return {"status": "success", "text": ""}
+
 @app.post('/chat')
 async def chat_endpoint(request: ChatRequest):
     return await chat_and_rag(request)

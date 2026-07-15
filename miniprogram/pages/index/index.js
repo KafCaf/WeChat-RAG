@@ -88,6 +88,30 @@ Page({
     })
   },
 
+  startRecord() {
+    this.recorder = wx.getRecorderManager()
+    this.recorder.onStop((res) => {
+      if (!res.tempFilePath) return
+      const self = this
+      wx.showLoading({ title: '识别中...' })
+      wx.uploadFile({
+        url: app.globalData.API_BASE_URL + '/speech-to-text',
+        filePath: res.tempFilePath,
+        name: 'file',
+        success(r) {
+          wx.hideLoading()
+          try { const data = JSON.parse(r.data); if (data.text) self.setData({ inputValue: data.text }) } catch(e) {}
+        },
+        fail() { wx.hideLoading() }
+      })
+    })
+    this.recorder.start({ duration: 60000, format: 'mp3' })
+  },
+
+  stopRecord() {
+    if (this.recorder) this.recorder.stop()
+  },
+
   enterProject(e) {
     const name = e.currentTarget.dataset.name
     const self = this
