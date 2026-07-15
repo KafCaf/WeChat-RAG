@@ -113,9 +113,26 @@ Page({
         name: 'file',
         success(r) {
           wx.hideLoading()
-          try { const data = JSON.parse(r.data); if (data.text) self.setData({ inputValue: data.text }) } catch(e) {}
+          try {
+            const data = JSON.parse(r.data)
+            if (data.status === 'error') {
+              wx.showToast({ title: data.detail || '识别失败', icon: 'none', duration: 2500 })
+              return
+            }
+            if (data.text) {
+              self.setData({ inputValue: data.text })
+            } else {
+              wx.showToast({ title: '未识别到文字，请重试', icon: 'none', duration: 2000 })
+            }
+          } catch(e) {
+            wx.showToast({ title: '识别结果异常，请重试', icon: 'none', duration: 2000 })
+          }
         },
-        fail() { wx.hideLoading() }
+        fail(err) {
+          wx.hideLoading()
+          console.error('[ASR] 上传失败:', err)
+          wx.showToast({ title: '网络异常，请检查连接', icon: 'none', duration: 2500 })
+        }
       })
     })
     this.recorder.onError(() => {

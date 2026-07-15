@@ -289,32 +289,64 @@ async def chat_and_rag(request: ChatRequest):
 @app.post("/speech-to-text")
 async def speech_to_text(file: UploadFile = File(...)):
     """上传音频文件，调用百炼 ASR 返回文字"""
+    # 检查 API Key
+    if not DASHSCOPE_API_KEY:
+        print("[ASR] 错误: DASHSCOPE_API_KEY 未配置")
+        return {"status": "error", "detail": "语音服务未配置 API Key"}
+
+    tmp_path = None
     try:
         audio_bytes = await file.read()
+        file_size_kb = len(audio_bytes) / 1024
+        print(f"[ASR] 收到音频: {file.filename}, 大小: {file_size_kb:.1f} KB")
+
+        if len(audio_bytes) < 100:
+            print("[ASR] 错误: 音频文件过小（可能为空）")
+            return {"status": "error", "detail": "录音文件过短，请重新录制"}
+
         # 保存临时文件
-        tmp_path = f"/tmp/{file.filename}"
+        tmp_path = f"/tmp/{file.filename or 'voice.mp3'}"
         with open(tmp_path, "wb") as f:
             f.write(audio_bytes)
-        
-        # 调用百炼语音识别 (fun-asr)
+
+        # 调用百炼语音识别 (qwen3-asr-flash)
         import requests
         url = "https://dashscope.aliyuncs.com/compatible-mode/v1/audio/transcriptions"
         headers = {"Authorization": f"Bearer {DASHSCOPE_API_KEY}"}
         with open(tmp_path, "rb") as f:
-            resp = requests.post(url, headers=headers, files={"file": f}, data={"model": "qwen3-asr-flash"})
-        os.remove(tmp_path)
-        
+            resp = requests.post(
+                url, headers=headers,
+                files={"file": (os.path.basename(tmp_path), f, "audio/mpeg")},
+                data={"model": "qwen3-asr-flash"},
+                timeout=30
+            )
+
         if resp.status_code == 200:
             result = resp.json()
-            # OpenAI 兼容格式: {"text": "..."}
             text = result.get("text", "") or result.get("output", {}).get("text", "")
             print(f"[ASR] 识别结果: {text[:100] if text else '(空)'}")
             return {"status": "success", "text": text}
-        print(f"[ASR] HTTP {resp.status_code}: {resp.text[:200]}")
-        return {"status": "success", "text": ""}
+
+        print(f"[ASR] HTTP {resp.status_code}: {resp.text[:300]}")
+        # 尝试提取错误信息
+        detail = f"ASR API 返回 {resp.status_code}"
+        try:
+            err = resp.json()
+            detail = err.get("error", {}).get("message", err.get("message", detail))
+        except:
+            pass
+        return {"status": "error", "detail": detail}
+
+    except requests.exceptions.Timeout:
+        print("[ASR] 错误: 请求超时")
+        return {"status": "error", "detail": "语音识别超时，请重试"}
     except Exception as e:
         print(f"[ASR] 语音识别失败: {e}")
-        return {"status": "success", "text": ""}
+        traceback.print_exc()
+        return {"status": "error", "detail": f"语音识别失败: {str(e)}"}
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 @app.post('/chat')
 async def chat_endpoint(request: ChatRequest):
