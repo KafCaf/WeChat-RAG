@@ -103,5 +103,7 @@ page { background: #f5f5f5; height: 100%; font-family: -apple-system, sans-serif
 .bar-mic { width: 76rpx; height: 76rpx; border-radius: 50%; background: #f3f4f6; display: flex; align-items: center; justify-content: center;  }
 
 .mic-inner { position: relative; width: 28rpx; height: 32rpx; }
-.mic-head { width: 20rpx; height: 20rpx; border: 3rpx solid #94a3b8; border-radius: 50%; position: absolute; top: 0; left: 1rpx; }
-.mic-stem { width: 3rpx; height: 16rpx; background: #94a3b8; border-radius: 3rpx; position: absolute; bottom: 0; left: 40%; }
+
+.mic-arc { width: 20rpx; height: 20rpx; border: 3rpx solid #94a3b8; border-radius: 50%; border-left-color: transparent; border-bottom-color: transparent; transform: rotate(-45deg); position: absolute; top: 6rpx; left: 2rpx; }
+.mic-arc2 { width: 30rpx; height: 30rpx; border: 2.5rpx solid #94a3b8; border-radius: 50%; border-left-color: transparent; border-bottom-color: transparent; transform: rotate(-45deg); position: absolute; top: 1rpx; left: -3rpx; }
+.mic-arc3 { width: 40rpx; height: 40rpx; border: 2rpx solid #94a3b8; border-radius: 50%; border-left-color: transparent; border-bottom-color: transparent; transform: rotate(-45deg); position: absolute; top: -4rpx; left: -8rpx; }
