@@ -309,30 +309,55 @@ async def speech_to_text(file: UploadFile = File(...)):
         with open(tmp_path, "wb") as f:
             f.write(audio_bytes)
 
-        # 调用百炼语音识别 (qwen3-asr-flash)
-        import requests
-        url = "https://dashscope.aliyuncs.com/compatible-mode/v1/audio/transcriptions"
-        headers = {"Authorization": f"Bearer {DASHSCOPE_API_KEY}"}
-        with open(tmp_path, "rb") as f:
-            resp = requests.post(
-                url, headers=headers,
-                files={"file": (os.path.basename(tmp_path), f, "audio/mpeg")},
-                data={"model": "qwen3-asr-flash"},
-                timeout=30
-            )
+        # 调用百炼语音识别 (fun-asr-flash，同步，支持 Base64)
+        import requests, base64
+
+        audio_b64 = base64.b64encode(audio_bytes).decode()
+        # 推断音频格式
+        ext = os.path.splitext(file.filename or "voice.mp3")[1].lower().lstrip(".")
+        audio_format = ext if ext in ("wav", "mp3", "opus", "aac", "flac", "ogg", "m4a", "webm") else "mp3"
+        mime = f"audio/{audio_format}" if audio_format != "mp3" else "audio/mpeg"
+
+        url = "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
+        headers = {
+            "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
+            "Content-Type": "application/json",
+            "X-DashScope-SSE": "disable",
+        }
+        body = {
+            "model": "fun-asr-flash-2026-06-15",
+            "input": {
+                "messages": [{
+                    "role": "user",
+                    "content": [{
+                        "type": "input_audio",
+                        "input_audio": {
+                            "data": f"data:{mime};base64,{audio_b64}"
+                        }
+                    }]
+                }]
+            },
+            "parameters": {"format": audio_format}
+        }
+
+        resp = requests.post(url, headers=headers, json=body, timeout=30)
+        print(f"[ASR] HTTP {resp.status_code}")
 
         if resp.status_code == 200:
             result = resp.json()
-            text = result.get("text", "") or result.get("output", {}).get("text", "")
+            # fun-asr-flash 特殊响应格式: output.text 或 output.output.sentence.text
+            text = (
+                result.get("output", {}).get("text", "")
+                or result.get("output", {}).get("output", {}).get("sentence", {}).get("text", "")
+            )
             print(f"[ASR] 识别结果: {text[:100] if text else '(空)'}")
             return {"status": "success", "text": text}
 
-        print(f"[ASR] HTTP {resp.status_code}: {resp.text[:300]}")
-        # 尝试提取错误信息
+        print(f"[ASR] 响应: {resp.text[:300]}")
         detail = f"ASR API 返回 {resp.status_code}"
         try:
             err = resp.json()
-            detail = err.get("error", {}).get("message", err.get("message", detail))
+            detail = err.get("message", err.get("code", detail))
         except:
             pass
         return {"status": "error", "detail": detail}
