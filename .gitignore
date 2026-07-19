@@ -26,6 +26,7 @@ node_modules/
 .env
 es-data/
 .reasonix/
+python-course/
 rag-ui/dist/
 *.log
 *.pid

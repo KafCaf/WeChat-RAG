@@ -146,16 +146,12 @@ async def chat_and_rag(request: ChatRequest):
     try:
         loop = asyncio.get_running_loop()
 
-        # 轻量同义词映射（0 API 调用，纯本地）
-        SYNONYM_MAP = {
-            "吃住": "生活开支 住房租赁 食宿",
-            "工资": "资助经费 资助额度 经费",
-            "多少钱": "资助额度 经费标准 费用",
-        }
+        # 拼接上一轮用户消息（零延迟指代消解），再去同义词后检索
         query = request.message
-        for k, v in SYNONYM_MAP.items():
-            if k in query:
-                query = f"{query} {v}"
+        if request.history:
+            prev_user_msg = request.history[-1][0]
+            if prev_user_msg and len(prev_user_msg.strip()) > 1:
+                query = f"{prev_user_msg} {query}"
         query = query.strip()
 
         start_retrieval_time = time.time()
@@ -174,7 +170,62 @@ async def chat_and_rag(request: ChatRequest):
             docs, scores = search_result
         else:
             docs = search_result
-            
+            scores = []
+
+        # --- 检索质量 judge：rerank 分低则 LLM 改写重搜 ---
+        RERANK_THRESHOLD = 0.3
+        top1_score = scores[0] if scores else 0
+        print(f"[检索] Rerank top-1 分数: {top1_score:.3f} (阈值: {RERANK_THRESHOLD})")
+
+        if top1_score < RERANK_THRESHOLD and request.history:
+            print("[检索] 分低，触发 LLM 改写...")
+            try:
+                # 构造改写 prompt
+                history_text = ""
+                for u, b in request.history[-3:]:
+                    clean = (b or "").split("参考来源：")[0].strip()
+                    if "参考信息中未提及" not in clean:
+                        history_text += f"用户: {u}\n助手: {clean}\n"
+
+                rewrite_payload = {
+                    "model": TARGET_MODEL,
+                    "messages": [
+                        {"role": "system", "content": "你是查询改写引擎。根据对话历史和用户当前问题，输出一个更具体、更精准的检索关键词短语（10字以内，纯关键词不要句子）。只输出改写结果，不要解释。"},
+                        {"role": "user", "content": f"对话历史:\n{history_text}\n当前问题: {request.message}\n\n改写后的检索关键词:"}
+                    ],
+                    "temperature": 0.01,
+                    "max_tokens": 32,
+                    "stop": ["\n"]
+                }
+                rewrite_headers = {
+                    "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
+                    "Content-Type": "application/json"
+                }
+                rewrite_resp = await http_client.post(DASHSCOPE_LLM_URL, json=rewrite_payload, headers=rewrite_headers, timeout=15)
+                if rewrite_resp.status_code == 200:
+                    rewrite_result = rewrite_resp.json()
+                    expanded = rewrite_result["choices"][0]["message"]["content"].strip()
+                    if expanded and expanded != request.message:
+                        print(f"[检索] 改写结果: '{request.message}' → '{expanded}'")
+                        # 二次检索
+                        sr2 = await loop.run_in_executor(
+                            None, retriever.search_rrf, CURRENT_INDEX, expanded, 40, request.top_k, request.project_name
+                        )
+                        if isinstance(sr2, tuple) and len(sr2) == 2:
+                            docs2, scores2 = sr2
+                            if scores2 and (not scores or scores2[0] > scores[0]):
+                                docs, scores = docs2, scores2
+                                print(f"[检索] 采用改写结果，top-1: {scores[0]:.3f}")
+                            else:
+                                print("[检索] 改写未改善，保留原始结果")
+                    else:
+                        print("[检索] 改写结果与原文相同，跳过")
+                else:
+                    print(f"[检索] 改写 LLM 返回 {rewrite_resp.status_code}")
+            except Exception as e:
+                print(f"[检索] LLM 改写失败（降级用原始结果）: {e}")
+        # --- judge 结束 ---
+        
         context_list = []
         if docs:
             for doc in docs:
