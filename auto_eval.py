@@ -1,4 +1,5 @@
 import json
+import os
 import time
 import requests
 import re
@@ -6,7 +7,7 @@ import csv
 from collections import defaultdict
 
 # ================= 核心配置区 =================
-RAG_RAG_API_URL = os.getenv("RAG_API_URL", "http://127.0.0.1:6006/chat")
+RAG_API_URL = os.getenv("RAG_API_URL", "http://127.0.0.1:6006/chat")
 JUDGE_API_KEY = os.getenv("JUDGE_API_KEY", "")
 JUDGE_API_URL = os.getenv("JUDGE_API_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions")
 # ==============================================
@@ -18,11 +19,11 @@ def load_test_cases(file_path):
     print(f"成功加载 {len(cases)} 条测试用例。\n")
     return cases
 
-def query_rag_system(question):
+def query_rag_system(question, project_name=None):
     payload = {
-        "message": question,    # 完美对齐后端的 message 字段
-        "project_name": None, 
-        "history": [], 
+        "message": question,
+        "project_name": project_name,
+        "history": [],
         "top_k": 6
     }
     start_time = time.time()
@@ -85,11 +86,12 @@ def main():
 
     for i, case in enumerate(test_cases):
         question, ground_truth, category = case[0], case[1], case[2]
-        print(f"[{i+1}/{len(test_cases)}] 正在测试 ({category}): {question[:20]}...")
+        project_name = case[3] if len(case) >= 4 else None
+        print(f"[{i+1}/{len(test_cases)}] 正在测试 ({category}): {question[:30]}...")
         
-        answer, context, latency = query_rag_system(question)
+        answer, context, latency = query_rag_system(question, project_name)
         
-        if category in ["反例", "对抗性测试", "越界测试"]:
+        if category.startswith("反例"):
             if "未提及" in answer or "不知道" in answer:
                 scores = {"Hit_Rate": 5, "Faithfulness": 5, "Relevance": 5}
             else:
