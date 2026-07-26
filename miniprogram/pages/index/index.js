@@ -6,7 +6,7 @@ function _formatAnswer(answer) {
   if (!answer) return answer
   const sourceStyle = 'margin-top:12px;border-top:1px solid #e5e7eb;padding-top:8px;font-size:12px;color:#9ca3af;'
   return answer.replace(/\n+来源[：:]\s*(.*?)$/m, (_, citation) =>
-    `\n<div style="${sourceStyle}">📎 来源：${citation}</div>`
+    `\n<div style="${sourceStyle}">来源：${citation}</div>`
   )
 }
 
