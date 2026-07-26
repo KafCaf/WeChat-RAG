@@ -60,6 +60,7 @@
                 <view class="typing-dot"></view><view class="typing-dot"></view><view class="typing-dot"></view>
               </view>
               <rich-text wx:else nodes="{{md.parse(item.content)}}"></rich-text>
+              <view wx:if="{{item.source}}" class="source-tag">{{item.source}}</view>
             </view>
           </view>
         </block>

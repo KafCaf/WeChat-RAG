@@ -1,13 +1,14 @@
 const app = getApp()
 /**
- * 格式化 AI 回答：将末尾 "来源：" 引用替换为分隔线 + 淡化样式
+ * 拆分 AI 回答：主内容 + 来源引用
  */
-function _formatAnswer(answer) {
-  if (!answer) return answer
-  const sourceStyle = 'margin-top:12px;border-top:1px solid #e5e7eb;padding-top:8px;font-size:12px;color:#9ca3af;'
-  return answer.replace(/\n+来源[：:]\s*(.*?)$/m, (_, citation) =>
-    `\n<div style="${sourceStyle}">来源：${citation}</div>`
-  )
+function _splitAnswer(answer) {
+  const m = (answer || '').match(/^(.*?)\n+来源[：:]\s*(.*?)$/ms)
+  if (m) return { main: m[1].trimEnd(), source: `来源：${m[2]}` }
+  // 尝试匹配尾部没有换行的情况
+  const m2 = (answer || '').match(/^(.*)来源[：:]\s*(.*?)$/s)
+  if (m2 && !m2[1].endsWith('元')) return { main: m2[1].trimEnd(), source: `来源：${m2[2]}` }
+  return { main: answer, source: '' }
 }
 
 Page({
@@ -487,7 +488,8 @@ Page({
       success(res) {
         if (res.statusCode === 200 && res.data.answer) {
           const msgs = self.data.messages.filter(m => m.id !== loadingMsgId)
-          const update = { messages: [...msgs, { id: `msg-${Date.now()}`, role: 'ai', content: _formatAnswer(res.data.answer) }] }
+          const { main, source } = _splitAnswer(res.data.answer)
+          const update = { messages: [...msgs, { id: `msg-${Date.now()}`, role: 'ai', content: main, source }] }
           if (res.data.conversation_id && res.data.conversation_id !== self.data.conversationId) {
             update.conversationId = res.data.conversation_id
             self.fetchConversations()
