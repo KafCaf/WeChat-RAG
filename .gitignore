@@ -30,3 +30,7 @@ python-course/
 rag-ui/dist/
 *.log
 *.pid
+# 聊天导出可能含凭据，禁止提交
+Wechat-RAG - 服务器部署及前端测试.json
+.env.*
+!.env.example

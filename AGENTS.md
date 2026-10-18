@@ -21,7 +21,7 @@ RAG 智能问答系统，面向政策文档。三项目（国际杰青计划 + �
 - 外网: https://rag-ai.top/（安全组 22/80/443）
 - 热更新: 改服务器文件 → `docker compose restart backend` → 10秒生效
 - ⚠️ 不要 `docker compose down` — ES 容器重建会丢失 IK 插件，需重装
-- 开发账号: `devuser`（密码 rag2026dev），可操作 Docker、Nginx
+- 开发账号与权限由管理员线下维护；禁止在仓库记录密码、密钥。
 
 ## 命令
 - 启动: `docker compose up -d`
